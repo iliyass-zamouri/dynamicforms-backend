@@ -7,7 +7,6 @@ export class Form {
     this.title = data.title
     this.description = data.description
     this.status = data.status
-    this.isActive = data.is_active
     this.allowMultipleSubmissions = data.allow_multiple_submissions
     this.requireAuthentication = data.require_authentication
     this.theme = data.theme
@@ -29,7 +28,6 @@ export class Form {
       title,
       description,
       status = 'draft',
-      isActive = true,
       allowMultipleSubmissions = true,
       requireAuthentication = false,
       theme = 'default',
@@ -45,9 +43,9 @@ export class Form {
     const queries = [
       {
         sql: `
-          INSERT INTO forms (id, slug, title, description, status, is_active, allow_multiple_submissions,
+          INSERT INTO forms (id, slug, title, description, status, allow_multiple_submissions,
                            require_authentication, theme, primary_color, notification_email, email_notifications, user_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         params: [
           formId,
@@ -55,7 +53,6 @@ export class Form {
           title,
           description || null,
           status,
-          isActive,
           allowMultipleSubmissions,
           requireAuthentication,
           theme,
@@ -144,7 +141,7 @@ export class Form {
 
   // Find form by slug
   static async findBySlug(slug) {
-    const sql = 'SELECT * FROM forms WHERE slug = ? AND is_active = TRUE'
+    const sql = 'SELECT * FROM forms WHERE slug = ? AND status = "active"'
     const result = await executeQuery(sql, [slug])
 
     if (result.success && result.data.length > 0) {
@@ -282,7 +279,6 @@ export class Form {
         sidebar_title,
         sidebar_description,
         sidebar_logo,
-        sidebar_is_active,
         footer_text,
         social_media_enabled,
         social_media_title
@@ -319,7 +315,6 @@ export class Form {
           title: settings.sidebar_title || '',
           description: settings.sidebar_description || '',
           logo: settings.sidebar_logo || '',
-          isActive: settings.sidebar_is_active === 1 || settings.sidebar_is_active === true, // Convert to boolean
           socialMedia: {
             enabled: settings.social_media_enabled || false,
             title: settings.social_media_title || '',
@@ -353,8 +348,8 @@ export class Form {
     const marketingId = crypto.randomUUID()
     queries.push({
       sql: `
-        INSERT INTO marketing_settings (id, form_id, sidebar_title, sidebar_description, sidebar_logo, sidebar_is_active, footer_text, social_media_enabled, social_media_title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO marketing_settings (id, form_id, sidebar_title, sidebar_description, sidebar_logo, footer_text, social_media_enabled, social_media_title)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
         marketingId,
@@ -362,7 +357,6 @@ export class Form {
         marketingData.sidebar.title || '',
         marketingData.sidebar.description || '',
         marketingData.sidebar.logo || '',
-        marketingData.sidebar.isActive === true || marketingData.sidebar.isActive === 1, // Convert to boolean
         marketingData.sidebar.footer.text || '',
         marketingData.sidebar.socialMedia.enabled || false,
         marketingData.sidebar.socialMedia.title || '',
@@ -402,7 +396,6 @@ export class Form {
       'title',
       'description',
       'status',
-      'isActive',
       'allowMultipleSubmissions',
       'requireAuthentication',
       'theme',
@@ -417,19 +410,17 @@ export class Form {
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key) && value !== undefined) {
         const dbField =
-          key === 'isActive'
-            ? 'is_active'
-            : key === 'allowMultipleSubmissions'
-              ? 'allow_multiple_submissions'
-              : key === 'requireAuthentication'
-                ? 'require_authentication'
-                : key === 'primaryColor'
-                  ? 'primary_color'
-                  : key === 'notificationEmail'
-                    ? 'notification_email'
-                    : key === 'emailNotifications'
-                      ? 'email_notifications'
-                      : key
+          key === 'allowMultipleSubmissions'
+            ? 'allow_multiple_submissions'
+            : key === 'requireAuthentication'
+              ? 'require_authentication'
+              : key === 'primaryColor'
+                ? 'primary_color'
+                : key === 'notificationEmail'
+                  ? 'notification_email'
+                  : key === 'emailNotifications'
+                    ? 'email_notifications'
+                    : key
 
         updates.push(`${dbField} = ?`)
         values.push(value)
@@ -532,7 +523,6 @@ export class Form {
       updatedAt: this.updatedAt,
       status: this.status,
       submissionsCount: this.submissionsCount,
-      isActive: this.isActive,
       allowMultipleSubmissions: this.allowMultipleSubmissions,
       requireAuthentication: this.requireAuthentication,
       theme: this.theme,

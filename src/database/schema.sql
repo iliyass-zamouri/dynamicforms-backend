@@ -24,7 +24,6 @@ CREATE TABLE forms (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     status ENUM('active', 'inactive', 'draft') DEFAULT 'draft',
-    is_active BOOLEAN DEFAULT TRUE,
     allow_multiple_submissions BOOLEAN DEFAULT TRUE,
     require_authentication BOOLEAN DEFAULT FALSE,
     theme VARCHAR(50) DEFAULT 'default',
@@ -37,8 +36,7 @@ CREATE TABLE forms (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_slug (slug),
     INDEX idx_user_id (user_id),
-    INDEX idx_status (status),
-    INDEX idx_is_active (is_active)
+    INDEX idx_status (status)
 );
 
 -- Form steps table
@@ -109,7 +107,6 @@ CREATE TABLE marketing_settings (
     sidebar_title VARCHAR(255),
     sidebar_description TEXT,
     sidebar_logo VARCHAR(500),
-    sidebar_is_active BOOLEAN DEFAULT TRUE,
     footer_text TEXT,
     social_media_enabled BOOLEAN DEFAULT FALSE,
     social_media_title VARCHAR(255),
