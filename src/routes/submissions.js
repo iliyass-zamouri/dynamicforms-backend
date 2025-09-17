@@ -10,6 +10,78 @@ import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/aut
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * /api/submissions:
+ *   post:
+ *     summary: Soumettre un formulaire
+ *     tags: [Submissions]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - formId
+ *               - data
+ *             properties:
+ *               formId:
+ *                 oneOf:
+ *                   - type: integer
+ *                     description: ID du formulaire
+ *                     example: 1
+ *                   - type: string
+ *                     description: Slug du formulaire
+ *                     example: "formulaire-contact-abc123"
+ *               data:
+ *                 type: object
+ *                 description: Données soumises du formulaire
+ *                 example:
+ *                   name: "Jean Dupont"
+ *                   email: "jean.dupont@example.com"
+ *                   message: "Bonjour, je souhaite vous contacter"
+ *     security: []
+ *     responses:
+ *       201:
+ *         description: Formulaire soumis avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         submission:
+ *                           $ref: '#/components/schemas/FormSubmission'
+ *       400:
+ *         description: Données de soumission invalides ou formulaire inactif
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authentification requise pour ce formulaire
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Submit form
 router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
   try {
@@ -32,7 +104,7 @@ router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
       })
     }
 
-    if (!form.isActive || form.status !== 'active') {
+    if (form.status !== 'active') {
       return res.status(400).json({
         success: false,
         message: "Le formulaire n'est pas actif",
@@ -97,6 +169,66 @@ router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/submissions:
+ *   get:
+ *     summary: Obtenir toutes les soumissions (admin uniquement)
+ *     tags: [Submissions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Nombre d'éléments par page
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *           minimum: 0
+ *         description: Décalage de pagination
+ *     responses:
+ *       200:
+ *         description: Soumissions récupérées avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         submissions:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FormSubmission'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé (admin requis)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get all submissions (admin only)
 router.get('/', authenticateToken, requireAdmin, validatePagination, async (req, res) => {
   try {
@@ -137,6 +269,62 @@ router.get('/', authenticateToken, requireAdmin, validatePagination, async (req,
   }
 })
 
+/**
+ * @swagger
+ * /api/submissions/{id}:
+ *   get:
+ *     summary: Obtenir une soumission par son ID
+ *     tags: [Submissions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID de la soumission
+ *     responses:
+ *       200:
+ *         description: Soumission récupérée avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         submission:
+ *                           $ref: '#/components/schemas/FormSubmission'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Soumission non trouvée
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get submission by ID
 router.get('/:id', authenticateToken, validateSubmissionId, async (req, res) => {
   try {
@@ -180,6 +368,60 @@ router.get('/:id', authenticateToken, validateSubmissionId, async (req, res) => 
   }
 })
 
+/**
+ * @swagger
+ * /api/submissions/user/my-submissions:
+ *   get:
+ *     summary: Obtenir les soumissions de l'utilisateur connecté
+ *     tags: [Submissions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Nombre d'éléments par page
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *           minimum: 0
+ *         description: Décalage de pagination
+ *     responses:
+ *       200:
+ *         description: Soumissions de l'utilisateur récupérées avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         submissions:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FormSubmission'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get user's submissions
 router.get('/user/my-submissions', authenticateToken, validatePagination, async (req, res) => {
   try {
@@ -229,6 +471,62 @@ router.get('/user/my-submissions', authenticateToken, validatePagination, async 
   }
 })
 
+/**
+ * @swagger
+ * /api/submissions/stats/overview:
+ *   get:
+ *     summary: Obtenir les statistiques générales des soumissions (admin uniquement)
+ *     tags: [Submissions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistiques récupérées avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         stats:
+ *                           type: object
+ *                           description: Statistiques générales
+ *                           properties:
+ *                             totalSubmissions:
+ *                               type: integer
+ *                               description: Nombre total de soumissions
+ *                             submissionsToday:
+ *                               type: integer
+ *                               description: Soumissions aujourd'hui
+ *                             submissionsThisWeek:
+ *                               type: integer
+ *                               description: Soumissions cette semaine
+ *                             submissionsThisMonth:
+ *                               type: integer
+ *                               description: Soumissions ce mois
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé (admin requis)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get submission statistics
 router.get('/stats/overview', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -284,6 +582,54 @@ router.get('/stats/date-range', authenticateToken, requireAdmin, async (req, res
   }
 })
 
+/**
+ * @swagger
+ * /api/submissions/{id}:
+ *   delete:
+ *     summary: Supprimer une soumission (admin uniquement)
+ *     tags: [Submissions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID de la soumission
+ *     responses:
+ *       200:
+ *         description: Soumission supprimée avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé (admin requis)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Soumission non trouvée
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Delete submission (admin only)
 router.delete('/:id', authenticateToken, requireAdmin, validateSubmissionId, async (req, res) => {
   try {

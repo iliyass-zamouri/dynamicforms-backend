@@ -213,3 +213,55 @@ export const validatePagination = [
 
   handleValidationErrors,
 ]
+
+// Success modal validation
+export const validateSuccessModal = [
+  body('successModal')
+    .isObject()
+    .withMessage('Le modal de succès doit être un objet'),
+
+  body('successModal.title')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Le titre du modal est requis et doit contenir entre 1 et 100 caractères'),
+
+  body('successModal.description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('La description du modal ne peut pas dépasser 500 caractères'),
+
+  body('successModal.actions')
+    .optional()
+    .isArray()
+    .withMessage('Les actions doivent être un tableau'),
+
+  body('successModal.actions.*.name')
+    .if(body('successModal.actions').isArray())
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Le nom de chaque action est requis et doit contenir entre 1 et 50 caractères'),
+
+  body('successModal.actions.*.url')
+    .if(body('successModal.actions').isArray())
+    .optional()
+    .isURL({ protocols: ['http', 'https'], require_protocol: true })
+    .withMessage('L\'URL de chaque action doit être une URL valide (http ou https)'),
+
+  body('successModal.closeEnabled')
+    .optional()
+    .isBoolean()
+    .withMessage('closeEnabled doit être un booléen'),
+
+  body('successModal.returnHomeEnabled')
+    .optional()
+    .isBoolean()
+    .withMessage('returnHomeEnabled doit être un booléen'),
+
+  body('successModal.resubmitEnabled')
+    .optional()
+    .isBoolean()
+    .withMessage('resubmitEnabled doit être un booléen'),
+
+  handleValidationErrors,
+]

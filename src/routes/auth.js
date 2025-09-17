@@ -10,6 +10,82 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Enregistrer un nouvel utilisateur
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 description: Nom de l'utilisateur
+ *                 example: "Jean Dupont"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Adresse email de l'utilisateur
+ *                 example: "jean.dupont@example.com"
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: Mot de passe de l'utilisateur
+ *                 example: "motdepasse123"
+ *               role:
+ *                 type: string
+ *                 enum: [user, admin]
+ *                 default: user
+ *                 description: Rôle de l'utilisateur
+ *     security: []
+ *     responses:
+ *       201:
+ *         description: Utilisateur créé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         user:
+ *                           $ref: '#/components/schemas/User'
+ *                         token:
+ *                           type: string
+ *                           description: Token JWT d'authentification
+ *       400:
+ *         description: Données de validation invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email déjà utilisé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Register new user
 router.post('/register', validateUserRegistration, async (req, res) => {
   try {
@@ -54,6 +130,69 @@ router.post('/register', validateUserRegistration, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Connecter un utilisateur
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Adresse email de l'utilisateur
+ *                 example: "jean.dupont@example.com"
+ *               password:
+ *                 type: string
+ *                 description: Mot de passe de l'utilisateur
+ *                 example: "motdepasse123"
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Connexion réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         user:
+ *                           $ref: '#/components/schemas/User'
+ *                         token:
+ *                           type: string
+ *                           description: Token JWT d'authentification
+ *       400:
+ *         description: Données de validation invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Identifiants invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Login user
 router.post('/login', validateUserLogin, async (req, res) => {
   try {
@@ -97,6 +236,42 @@ router.post('/login', validateUserLogin, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   get:
+ *     summary: Obtenir le profil de l'utilisateur connecté
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profil récupéré avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         user:
+ *                           $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get current user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
@@ -115,6 +290,70 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   put:
+ *     summary: Mettre à jour le profil utilisateur
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Nouveau nom de l'utilisateur
+ *                 example: "Jean Dupont"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Nouvel email de l'utilisateur
+ *                 example: "jean.dupont@example.com"
+ *     responses:
+ *       200:
+ *         description: Profil mis à jour avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         user:
+ *                           $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Données de mise à jour invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email déjà utilisé par un autre utilisateur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Update user profile
 router.put('/profile', authenticateToken, validateUserUpdate, async (req, res) => {
   try {

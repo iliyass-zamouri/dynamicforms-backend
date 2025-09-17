@@ -53,7 +53,7 @@ A Node.js Express backend API for the Dynamic Forms application with MySQL datab
 
    ```env
    # Server Configuration
-   PORT=3001
+   PORT=3000
    NODE_ENV=development
 
    # Database Configuration
@@ -195,7 +195,7 @@ npm run migrate
 
 | Variable         | Description           | Default               |
 | ---------------- | --------------------- | --------------------- |
-| `PORT`           | Server port           | 3001                  |
+| `PORT`           | Server port           | 3000                  |
 | `NODE_ENV`       | Environment           | development           |
 | `DB_HOST`        | Database host         | localhost             |
 | `DB_PORT`        | Database port         | 3306                  |

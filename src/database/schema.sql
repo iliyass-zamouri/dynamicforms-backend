@@ -30,6 +30,7 @@ CREATE TABLE forms (
     primary_color VARCHAR(7) DEFAULT '#3b82f6',
     notification_email VARCHAR(255),
     email_notifications BOOLEAN DEFAULT TRUE,
+    success_modal JSON,
     user_id VARCHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

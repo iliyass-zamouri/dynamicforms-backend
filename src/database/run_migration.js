@@ -8,10 +8,10 @@ const __dirname = path.dirname(__filename)
 
 async function runMigration() {
   try {
-    console.log('Running migration: add_sidebar_is_active...')
+    console.log('Running migration: remove_success_modal_index...')
 
     // Read the migration file
-    const migrationPath = path.join(__dirname, 'migrations', 'add_sidebar_is_active.sql')
+    const migrationPath = path.join(__dirname, 'migrations', 'remove_success_modal_index.sql')
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8')
 
     // Split the SQL into individual statements

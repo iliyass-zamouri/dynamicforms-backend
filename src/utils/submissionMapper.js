@@ -28,8 +28,9 @@ export function mapSubmissionDataToLabels(submissionData, form) {
     if (label) {
       mappedData[label] = value
     } else {
-      // Si le champ n'est pas trouvé, garder l'ID original
-      mappedData[fieldId] = value
+      // Si le champ n'est pas trouvé, garder l'ID original avec un préfixe pour indiquer qu'il s'agit d'un champ supprimé
+      // mappedData[`[Champ supprimé: ${fieldId}]`] = value
+      mappedData[`[Champ supprimé]`] = value
     }
   })
 

@@ -6,12 +6,64 @@ import {
   validateFormUpdate,
   validateFormId,
   validatePagination,
+  validateSuccessModal,
 } from '../middleware/validation.js'
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.js'
 import { v4 as uuidv4 } from 'uuid'
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * /api/forms:
+ *   get:
+ *     summary: Obtenir tous les formulaires
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Nombre d'éléments par page
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Décalage de pagination
+     *     responses:
+     *       200:
+     *         description: Liste des formulaires récupérée avec succès
+     *         content:
+     *           application/json:
+     *             schema:
+     *               allOf:
+     *                 - $ref: '#/components/schemas/Success'
+     *                 - type: object
+     *                   properties:
+     *                     data:
+     *                       type: object
+     *                       properties:
+     *                         forms:
+     *                           type: array
+     *                           items:
+     *                             $ref: '#/components/schemas/Form'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get all forms (with pagination)
 router.get('/', authenticateToken, validatePagination, async (req, res) => {
   try {
@@ -42,6 +94,62 @@ router.get('/', authenticateToken, validatePagination, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/{id}:
+ *   get:
+ *     summary: Obtenir un formulaire par son ID
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *     responses:
+ *       200:
+ *         description: Formulaire récupéré avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get form by ID
 router.get('/:id', authenticateToken, validateFormId, async (req, res) => {
   try {
@@ -78,6 +186,55 @@ router.get('/:id', authenticateToken, validateFormId, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/slug/{slug}:
+ *   get:
+ *     summary: Obtenir un formulaire par son slug (accès public)
+ *     tags: [Forms]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Slug du formulaire
+ *         example: "formulaire-contact-abc123"
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Formulaire récupéré avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *       401:
+ *         description: Authentification requise pour ce formulaire
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get form by slug (public access)
 router.get('/slug/:slug', optionalAuth, async (req, res) => {
   try {
@@ -114,6 +271,86 @@ router.get('/slug/:slug', optionalAuth, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/forms:
+ *   post:
+ *     summary: Créer un nouveau formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Titre du formulaire
+ *                 example: "Formulaire de contact"
+ *               description:
+ *                 type: string
+ *                 description: Description du formulaire
+ *                 example: "Formulaire pour nous contacter"
+ *               slug:
+ *                 type: string
+ *                 description: Slug unique du formulaire (généré automatiquement si non fourni)
+ *                 example: "formulaire-contact-abc123"
+ *               steps:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/FormStep'
+ *                 description: Étapes du formulaire
+ *               isActive:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Statut actif du formulaire
+ *               requireAuthentication:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Authentification requise
+ *               allowMultipleSubmissions:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Autoriser les soumissions multiples
+ *     responses:
+ *       201:
+ *         description: Formulaire créé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *       400:
+ *         description: Données de formulaire invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Create new form
 router.post('/', authenticateToken, validateFormCreation, async (req, res) => {
   try {
@@ -148,6 +385,103 @@ router.post('/', authenticateToken, validateFormCreation, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/{id}:
+ *   put:
+ *     summary: Mettre à jour un formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 255
+ *                 description: Titre du formulaire
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *                 description: Description du formulaire
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, draft]
+ *                 description: Statut du formulaire
+ *               theme:
+ *                 type: string
+ *                 maxLength: 50
+ *                 description: Thème du formulaire
+ *               primaryColor:
+ *                 type: string
+ *                 pattern: '^#[0-9A-Fa-f]{6}$'
+ *                 description: Couleur principale (hexadécimal)
+ *               notificationEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: Email de notification
+ *               emailNotifications:
+ *                 type: boolean
+ *                 description: Activer les notifications par email
+ *     responses:
+ *       200:
+ *         description: Formulaire mis à jour avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *       400:
+ *         description: Données de validation invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Update form
 router.put('/:id', authenticateToken, validateFormId, validateFormUpdate, async (req, res) => {
   try {
@@ -197,6 +531,82 @@ router.put('/:id', authenticateToken, validateFormId, validateFormUpdate, async 
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/{id}/steps:
+ *   put:
+ *     summary: Mettre à jour les étapes et champs d'un formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - steps
+ *             properties:
+ *               steps:
+ *                 type: array
+ *                 description: Liste des étapes du formulaire
+ *                 items:
+ *                   $ref: '#/components/schemas/FormStep'
+ *     responses:
+ *       200:
+ *         description: Étapes du formulaire mises à jour avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *       400:
+ *         description: Données de validation invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Update form steps and fields
 router.put('/:id/steps', authenticateToken, validateFormId, async (req, res) => {
   try {
@@ -255,6 +665,123 @@ router.put('/:id/steps', authenticateToken, validateFormId, async (req, res) => 
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/{id}/marketing:
+ *   put:
+ *     summary: Mettre à jour les paramètres marketing d'un formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - marketing
+ *             properties:
+ *               marketing:
+ *                 type: object
+ *                 description: Paramètres marketing du formulaire
+ *                 properties:
+ *                   sidebar:
+ *                     type: object
+ *                     properties:
+ *                       title:
+ *                         type: string
+ *                         description: Titre de la sidebar
+ *                       description:
+ *                         type: string
+ *                         description: Description de la sidebar
+ *                       logo:
+ *                         type: string
+ *                         description: URL du logo
+ *                       enabled:
+ *                         type: boolean
+ *                         description: Activer la sidebar
+ *                       socialMedia:
+ *                         type: object
+ *                         properties:
+ *                           enabled:
+ *                             type: boolean
+ *                           title:
+ *                             type: string
+ *                           buttons:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 platform:
+ *                                   type: string
+ *                                 url:
+ *                                   type: string
+ *                                 icon:
+ *                                   type: string
+ *                                 enabled:
+ *                                   type: boolean
+ *                                 order:
+ *                                   type: integer
+ *                       footer:
+ *                         type: object
+ *                         properties:
+ *                           text:
+ *                             type: string
+ *     responses:
+ *       200:
+ *         description: Paramètres marketing mis à jour avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *       400:
+ *         description: Données de validation invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Update form marketing settings
 router.put('/:id/marketing', authenticateToken, validateFormId, async (req, res) => {
   try {
@@ -313,6 +840,54 @@ router.put('/:id/marketing', authenticateToken, validateFormId, async (req, res)
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/{id}:
+ *   delete:
+ *     summary: Supprimer un formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *     responses:
+ *       200:
+ *         description: Formulaire supprimé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Delete form
 router.delete('/:id', authenticateToken, validateFormId, async (req, res) => {
   try {
@@ -356,6 +931,79 @@ router.delete('/:id', authenticateToken, validateFormId, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/{id}/submissions:
+ *   get:
+ *     summary: Obtenir les soumissions d'un formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Nombre d'éléments par page
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *           minimum: 0
+ *         description: Décalage de pagination
+ *     responses:
+ *       200:
+ *         description: Soumissions récupérées avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         submissions:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FormSubmission'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get form submissions
 router.get(
   '/:id/submissions',
@@ -404,6 +1052,79 @@ router.get(
   },
 )
 
+/**
+ * @swagger
+ * /api/forms/{id}/stats:
+ *   get:
+ *     summary: Obtenir les statistiques d'un formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *     responses:
+ *       200:
+ *         description: Statistiques récupérées avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         stats:
+ *                           type: object
+ *                           description: Statistiques du formulaire
+ *                           properties:
+ *                             totalSubmissions:
+ *                               type: integer
+ *                               description: Nombre total de soumissions
+ *                             submissionsToday:
+ *                               type: integer
+ *                               description: Soumissions aujourd'hui
+ *                             submissionsThisWeek:
+ *                               type: integer
+ *                               description: Soumissions cette semaine
+ *                             submissionsThisMonth:
+ *                               type: integer
+ *                               description: Soumissions ce mois
+ *                             averageSubmissionsPerDay:
+ *                               type: number
+ *                               description: Moyenne de soumissions par jour
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // Get form statistics
 router.get('/:id/stats', authenticateToken, validateFormId, async (req, res) => {
   try {
@@ -436,6 +1157,173 @@ router.get('/:id/stats', authenticateToken, validateFormId, async (req, res) => 
     })
   } catch (error) {
     console.error('Get form stats error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Erreur interne du serveur',
+    })
+  }
+})
+
+/**
+ * @swagger
+ * /api/forms/{id}/success-modal:
+ *   put:
+ *     summary: Mettre à jour le modal de succès d'un formulaire
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID du formulaire
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - successModal
+ *             properties:
+ *               successModal:
+ *                 type: object
+ *                 description: Configuration du modal de succès
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                     description: Titre du modal
+ *                     example: "Félicitations !"
+ *                   description:
+ *                     type: string
+ *                     description: Description du modal
+ *                     example: "Votre formulaire a été soumis avec succès."
+ *                   actions:
+ *                     type: array
+ *                     description: Actions disponibles dans le modal
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                           example: "Voir les résultats"
+ *                         url:
+ *                           type: string
+ *                           example: "https://example.com/results"
+ *                   closeEnabled:
+ *                     type: boolean
+ *                     description: Permettre de fermer le modal
+ *                     example: true
+ *                   returnHomeEnabled:
+ *                     type: boolean
+ *                     description: Afficher le bouton retour à l'accueil
+ *                     example: true
+ *                   resubmitEnabled:
+ *                     type: boolean
+ *                     description: Permettre de soumettre à nouveau
+ *                     example: false
+ *     responses:
+ *       200:
+ *         description: Modal de succès mis à jour avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *       400:
+ *         description: Données de validation invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Accès refusé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Formulaire non trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+// Update success modal
+router.put('/:id/success-modal', authenticateToken, validateFormId, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { successModal } = req.body
+
+    if (!successModal) {
+      return res.status(400).json({
+        success: false,
+        message: 'Les données du modal de succès sont requises',
+      })
+    }
+
+    const form = await Form.findById(id)
+
+    if (!form) {
+      return res.status(404).json({
+        success: false,
+        message: 'Formulaire non trouvé',
+      })
+    }
+
+    // Check if user owns the form or is admin
+    if (req.user.role !== 'admin' && form.userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé',
+      })
+    }
+
+    const success = await form.update({
+      successModal: successModal
+    })
+
+    if (!success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Échec de la mise à jour du modal de succès',
+      })
+    }
+
+    // Get updated form
+    const updatedForm = await Form.findById(id)
+
+    res.json({
+      success: true,
+      message: 'Modal de succès mis à jour avec succès',
+      data: {
+        form: updatedForm.toJSON(),
+      },
+    })
+  } catch (error) {
+    console.error('Update success modal error:', error)
     res.status(500).json({
       success: false,
       message: 'Erreur interne du serveur',

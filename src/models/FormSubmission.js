@@ -209,7 +209,21 @@ export class FormSubmission {
 
   // Convert to JSON with field labels instead of IDs
   toJSON(form = null) {
-    const data = form ? mapSubmissionDataToLabels(this.submissionData, form) : this.submissionData
+    let data = this.submissionData
+    
+    // Si on a un formulaire, on essaie de mapper les données
+    if (form) {
+      // Vérifier si les données contiennent déjà des labels (pas d'IDs UUID)
+      const hasUuidKeys = Object.keys(data).some(key => 
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)
+      )
+      
+      // Si on trouve des IDs UUID, on mappe vers les labels
+      if (hasUuidKeys) {
+        data = mapSubmissionDataToLabels(data, form)
+      }
+      // Sinon, on garde les données telles quelles (déjà mappées)
+    }
 
     return {
       id: this.id,

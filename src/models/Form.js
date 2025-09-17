@@ -19,6 +19,9 @@ export class Form {
     this.steps = data.steps || []
     this.submissionsCount = data.submissions_count || 0
     this.marketing = data.marketing || null
+    this.successModal = data.success_modal 
+      ? (typeof data.success_modal === 'string' ? JSON.parse(data.success_modal) : data.success_modal)
+      : null
   }
 
   // Create a new form
@@ -279,6 +282,7 @@ export class Form {
         sidebar_title,
         sidebar_description,
         sidebar_logo,
+        sidebar_enabled,
         footer_text,
         social_media_enabled,
         social_media_title
@@ -315,6 +319,7 @@ export class Form {
           title: settings.sidebar_title || '',
           description: settings.sidebar_description || '',
           logo: settings.sidebar_logo || '',
+          enabled: settings.sidebar_enabled === 1 || settings.sidebar_enabled === true, // Only true if explicitly 1 or true
           socialMedia: {
             enabled: settings.social_media_enabled || false,
             title: settings.social_media_title || '',
@@ -348,8 +353,8 @@ export class Form {
     const marketingId = crypto.randomUUID()
     queries.push({
       sql: `
-        INSERT INTO marketing_settings (id, form_id, sidebar_title, sidebar_description, sidebar_logo, footer_text, social_media_enabled, social_media_title)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO marketing_settings (id, form_id, sidebar_title, sidebar_description, sidebar_logo, sidebar_enabled, footer_text, social_media_enabled, social_media_title)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
         marketingId,
@@ -357,6 +362,7 @@ export class Form {
         marketingData.sidebar.title || '',
         marketingData.sidebar.description || '',
         marketingData.sidebar.logo || '',
+        marketingData.sidebar.enabled === true, // Only true if explicitly set to true
         marketingData.sidebar.footer.text || '',
         marketingData.sidebar.socialMedia.enabled || false,
         marketingData.sidebar.socialMedia.title || '',
@@ -390,11 +396,19 @@ export class Form {
     return result.success
   }
 
+  // Update success modal settings for a form
+  static async updateSuccessModal(formId, successModalData) {
+    const sql = 'UPDATE forms SET success_modal = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    const result = await executeQuery(sql, [JSON.stringify(successModalData), formId])
+    return result.success
+  }
+
   // Update form
   async update(updateData) {
     const allowedFields = [
       'title',
       'description',
+      'slug',
       'status',
       'allowMultipleSubmissions',
       'requireAuthentication',
@@ -402,6 +416,7 @@ export class Form {
       'primaryColor',
       'notificationEmail',
       'emailNotifications',
+      'successModal',
     ]
 
     const updates = []
@@ -420,10 +435,13 @@ export class Form {
                   ? 'notification_email'
                   : key === 'emailNotifications'
                     ? 'email_notifications'
-                    : key
+                    : key === 'successModal'
+                      ? 'success_modal'
+                      : key
 
         updates.push(`${dbField} = ?`)
-        values.push(value)
+        // Pour successModal, on sérialise en JSON
+        values.push(key === 'successModal' ? JSON.stringify(value) : value)
       }
     }
 
@@ -530,6 +548,7 @@ export class Form {
       notificationEmail: this.notificationEmail,
       emailNotifications: this.emailNotifications,
       marketing: this.marketing,
+      successModal: this.successModal,
     }
   }
 }

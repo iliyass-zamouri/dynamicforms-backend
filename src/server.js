@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import path from 'path'
+import swaggerUi from 'swagger-ui-express'
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/errorHandler.js'
@@ -22,6 +23,9 @@ import submissionsRoutes from './routes/submissions.js'
 // Import database connection
 import { testConnection } from './database/connection.js'
 
+// Import Swagger configuration
+import { swaggerSpec } from './config/swagger.js'
+
 // Load environment variables
 dotenv.config()
 
@@ -29,7 +33,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3000
 
 // Trust proxy for accurate IP addresses
 app.set('trust proxy', 1)
@@ -44,12 +48,53 @@ app.use(
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: function (origin, callback) {
+      // Autoriser les requêtes sans origin (comme les applications mobiles ou Postman)
+      if (!origin) return callback(null, true)
+      
+      const allowedOrigins = [
+        process.env.FRONTEND_URL || 'http://localhost:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080'
+      ]
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+      
+      // Pour Swagger UI, autoriser les requêtes depuis le même serveur
+      if (origin && origin.includes('localhost:3000')) {
+        return callback(null, true)
+      }
+      
+      callback(new Error('Non autorisé par CORS'))
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization', 
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers'
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    optionsSuccessStatus: 200
   }),
 )
+
+// Handle preflight requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.sendStatus(200)
+})
 
 // Rate limiting
 app.use(generalLimiter)
@@ -61,6 +106,36 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // Static files (for file uploads)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Vérifier l'état du serveur
+ *     tags: [Health]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Serveur opérationnel
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Le serveur fonctionne"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2024-01-15T10:30:00.000Z"
+ *                 uptime:
+ *                   type: number
+ *                   description: Temps de fonctionnement en secondes
+ *                   example: 3600
+ */
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
@@ -76,12 +151,51 @@ app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/forms', apiLimiter, formsRoutes)
 app.use('/api/submissions', submissionLimiter, submissionsRoutes)
 
-// API documentation endpoint
+// Middleware CORS spécifique pour Swagger UI
+app.use('/api-docs', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  next()
+})
+
+// Swagger UI documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Dynamic Forms API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    tryItOutEnabled: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    defaultModelsExpandDepth: 2,
+    defaultModelExpandDepth: 2,
+    // Configuration pour éviter les erreurs CORS
+    requestInterceptor: (req) => {
+      req.headers['Access-Control-Allow-Origin'] = '*'
+      return req
+    }
+  }
+}))
+
+// Swagger JSON specification
+app.get('/api-docs.json', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Content-Type', 'application/json')
+  res.send(swaggerSpec)
+})
+
+// API documentation endpoint (legacy)
 app.get('/api', (req, res) => {
   res.json({
     success: true,
     message: 'API Dynamic Forms',
     version: '1.0.0',
+    documentation: 'http://localhost:3000/api-docs',
     endpoints: {
       auth: {
         'POST /api/auth/register': 'Register new user',
@@ -138,7 +252,7 @@ async function startServer() {
       console.log(`📡 Server running on port ${PORT}`)
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`)
       console.log(`🔗 API URL: http://localhost:${PORT}/api`)
-      console.log(`📚 API Documentation: http://localhost:${PORT}/api`)
+      console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`)
       console.log(`❤️  Health Check: http://localhost:${PORT}/health`)
     })
   } catch (error) {
