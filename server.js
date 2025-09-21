@@ -1,11 +1,16 @@
 // Point d'entrée principal pour Passenger
-// Ce fichier utilise CommonJS pour être compatible avec Passenger
+// Ce fichier utilise ES modules
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const path = require('path');
-const swaggerUi = require('swagger-ui-express');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import path from 'path';
+import swaggerUi from 'swagger-ui-express';
+import { fileURLToPath } from 'url';
+
+// Pour compatibilité avec __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configuration de base de l'app Express
 const app = express();
@@ -214,4 +219,4 @@ async function loadRoutes() {
 loadRoutes();
 
 // Export de l'app pour Passenger
-module.exports = app;
+export default app;

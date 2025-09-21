@@ -2,9 +2,10 @@
   "name": "dynamic-forms-backend",
   "version": "1.0.0",
   "description": "Node.js Express backend for Dynamic Forms application",
-  "main": "server.cjs",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.cjs",
+    "start": "node server.js",
     "dev": "node src/server-dev.js",
     "migrate": "node src/database/migrate.js"
   },
