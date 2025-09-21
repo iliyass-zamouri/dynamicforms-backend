@@ -6,14 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "test": "jest",
-    "migrate": "node src/database/migrate.js",
-    "docs": "echo 'Documentation API disponible sur: http://localhost:3000/api-docs' && npm start",
-    "test:swagger": "node test-swagger.js",
-    "test:docs": "node test-docs.js",
-    "deploy:swagger": "./deploy-swagger.sh",
-    "docker:swagger": "docker-compose -f docker-compose.swagger.yml up -d"
+    "migrate": "node src/database/migrate.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
@@ -33,11 +26,6 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0",
-    "nodemon": "^3.0.2",
-    "supertest": "^6.3.3"
   },
   "engines": {
     "node": ">=18.0.0"
