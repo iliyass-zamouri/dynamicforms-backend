@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Node.js Express backend for Dynamic Forms application",
   "main": "app.cjs",
-  "type": "module",
   "scripts": {
     "start": "node src/server.js",
     "migrate": "node src/database/migrate.js"
