@@ -1,0 +1,7 @@
+# Configuration Passenger pour Dynamic Forms Backend
+PassengerAppRoot /home/wcetgwbv/dynamic-forms-backend
+PassengerBaseURI /
+PassengerAppType node
+PassengerStartupFile server.cjs
+PassengerNodejs /usr/bin/node
+PassengerFriendlyErrorPages on
