@@ -7,6 +7,7 @@ import {
   validateUserUpdate,
 } from '../middleware/validation.js'
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
+import captchaService from '../services/captchaService.js'
 
 const router = express.Router()
 
@@ -48,6 +49,10 @@ const router = express.Router()
  *                 enum: [user, admin]
  *                 default: user
  *                 description: Rôle de l'utilisateur
+ *               captchaToken:
+ *                 type: string
+ *                 description: Token reCAPTCHA v2 (requis si CAPTCHA activé)
+ *                 example: "03AGdBq25..."
  *     security: []
  *     responses:
  *       201:
@@ -68,7 +73,7 @@ const router = express.Router()
  *                           type: string
  *                           description: Token JWT d'authentification
  *       400:
- *         description: Données de validation invalides
+ *         description: Données de validation invalides ou CAPTCHA échoué
  *         content:
  *           application/json:
  *             schema:
@@ -89,7 +94,19 @@ const router = express.Router()
 // Register new user
 router.post('/register', validateUserRegistration, async (req, res) => {
   try {
-    const { name, email, password, role = 'user' } = req.body
+    const { name, email, password, role = 'user', captchaToken } = req.body
+
+    // Validate CAPTCHA if enabled
+    if (captchaService.isEnabled()) {
+      const captchaResult = await captchaService.validateToken(captchaToken, req.ip)
+      if (!captchaResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation CAPTCHA échouée',
+          errors: captchaResult.errors || ['Token CAPTCHA invalide'],
+        })
+      }
+    }
 
     // Check if user already exists
     const existingUser = await User.findByEmail(email)
@@ -155,6 +172,10 @@ router.post('/register', validateUserRegistration, async (req, res) => {
  *                 type: string
  *                 description: Mot de passe de l'utilisateur
  *                 example: "motdepasse123"
+ *               captchaToken:
+ *                 type: string
+ *                 description: Token reCAPTCHA v2 (requis si CAPTCHA activé)
+ *                 example: "03AGdBq25..."
  *     security: []
  *     responses:
  *       200:
@@ -175,7 +196,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
  *                           type: string
  *                           description: Token JWT d'authentification
  *       400:
- *         description: Données de validation invalides
+ *         description: Données de validation invalides ou CAPTCHA échoué
  *         content:
  *           application/json:
  *             schema:
@@ -196,7 +217,19 @@ router.post('/register', validateUserRegistration, async (req, res) => {
 // Login user
 router.post('/login', validateUserLogin, async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password, captchaToken } = req.body
+
+    // Validate CAPTCHA if enabled
+    if (captchaService.isEnabled()) {
+      const captchaResult = await captchaService.validateToken(captchaToken, req.ip)
+      if (!captchaResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation CAPTCHA échouée',
+          errors: captchaResult.errors || ['Token CAPTCHA invalide'],
+        })
+      }
+    }
 
     // Find user by email
     const user = await User.findByEmail(email)

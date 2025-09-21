@@ -41,6 +41,11 @@ export const validateUserRegistration = [
     .isIn(['user', 'admin'])
     .withMessage('Le rôle doit être soit utilisateur soit administrateur'),
 
+  body('captchaToken')
+    .optional()
+    .isString()
+    .withMessage('Le token CAPTCHA doit être une chaîne de caractères'),
+
   handleValidationErrors,
 ]
 
@@ -48,6 +53,11 @@ export const validateUserLogin = [
   body('email').isEmail().normalizeEmail().withMessage('Veuillez fournir une adresse email valide'),
 
   body('password').notEmpty().withMessage('Le mot de passe est requis'),
+
+  body('captchaToken')
+    .optional()
+    .isString()
+    .withMessage('Le token CAPTCHA doit être une chaîne de caractères'),
 
   handleValidationErrors,
 ]
