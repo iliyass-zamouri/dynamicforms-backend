@@ -3,5 +3,5 @@ PassengerAppRoot /home/wcetgwbv/dynamic-forms-backend
 PassengerBaseURI /
 PassengerAppType node
 PassengerStartupFile server.cjs
-PassengerNodejs /usr/bin/node
+PassengerNodejs "/home/wcetgwbv/nodevenv/dynamic-forms-backend/20/bin/node"
 PassengerFriendlyErrorPages on
