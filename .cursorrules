@@ -1,0 +1,21 @@
+{
+  "rules": [
+    {
+      "description": "Bug fixing rule: Do not run the project",
+      "pattern": ".*",
+      "instructions": [
+        "When fixing bugs, never run the project or suggest running it.",
+        "Do not add run/debug commands such as npm start, flutter run, yarn dev, cargo run, etc.",
+        "Only provide code modifications or explanations as requested."
+      ]
+    },
+    {
+      "description": "Bug fixing rule: No Markdown",
+      "pattern": ".*",
+      "instructions": [
+        "When fixing bugs, do not create, edit, or suggest Markdown (.md) files.",
+        "Only create or modify Markdown if the user explicitly asks for it."
+      ]
+    }
+  ]
+}

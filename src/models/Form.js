@@ -53,15 +53,15 @@ export class Form {
         params: [
           formId,
           slug || null,
-          title,
+          title || 'Formulaire sans titre',
           description || null,
-          status,
-          allowMultipleSubmissions,
-          requireAuthentication,
-          theme,
-          primaryColor,
+          status || 'draft',
+          allowMultipleSubmissions !== undefined ? allowMultipleSubmissions : true,
+          requireAuthentication !== undefined ? requireAuthentication : false,
+          theme || 'default',
+          primaryColor || '#3b82f6',
           notificationEmail || null,
-          emailNotifications,
+          emailNotifications !== undefined ? emailNotifications : false,
           userId,
         ],
       },
@@ -458,54 +458,102 @@ export class Form {
 
   // Update form steps and fields
   async updateSteps(steps) {
-    const queries = [
-      {
-        sql: 'DELETE FROM field_options WHERE field_id IN (SELECT id FROM form_fields WHERE step_id IN (SELECT id FROM form_steps WHERE form_id = ?))',
-        params: [this.id],
-      },
-      {
-        sql: 'DELETE FROM form_fields WHERE step_id IN (SELECT id FROM form_steps WHERE form_id = ?)',
-        params: [this.id],
-      },
-      { sql: 'DELETE FROM form_steps WHERE form_id = ?', params: [this.id] },
-    ]
+    const queries = []
+    
+    // Get existing steps and fields to compare
+    const existingSteps = await Form.getStepsWithFields(this.id)
+    const existingStepsMap = new Map(existingSteps.map(step => [step.id, step]))
+    const existingFieldsMap = new Map()
+    
+    // Build map of existing fields by their IDs
+    existingSteps.forEach(step => {
+      if (step.fields) {
+        step.fields.forEach(field => {
+          existingFieldsMap.set(field.id, { ...field, stepId: step.id })
+        })
+      }
+    })
 
-    // Add new steps
+    // Process each step in the new data
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i]
-      const stepId = crypto.randomUUID()
+      let stepId = step.id
+      let isNewStep = false
 
-      queries.push({
-        sql: 'INSERT INTO form_steps (id, form_id, title, step_order) VALUES (?, ?, ?, ?)',
-        params: [stepId, this.id, step.title, i],
-      })
+      // Check if step exists, if not create new one
+      if (!stepId || !existingStepsMap.has(stepId)) {
+        stepId = crypto.randomUUID()
+        isNewStep = true
+        queries.push({
+          sql: 'INSERT INTO form_steps (id, form_id, title, step_order) VALUES (?, ?, ?, ?)',
+          params: [stepId, this.id, step.title, i],
+        })
+      } else {
+        // Update existing step
+        queries.push({
+          sql: 'UPDATE form_steps SET title = ?, step_order = ? WHERE id = ?',
+          params: [step.title, i, stepId],
+        })
+      }
 
-      // Add fields for this step
+      // Process fields for this step
       if (step.fields && step.fields.length > 0) {
         for (let j = 0; j < step.fields.length; j++) {
           const field = step.fields[j]
-          const fieldId = crypto.randomUUID()
+          let fieldId = field.id
+          let isNewField = false
 
-          queries.push({
-            sql: `
-              INSERT INTO form_fields (id, step_id, field_type, label, placeholder, is_required, field_order, validation_config, file_config)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `,
-            params: [
-              fieldId,
-              stepId,
-              field.type,
-              field.label,
-              field.placeholder,
-              field.required,
-              j,
-              JSON.stringify(field.validation || {}),
-              JSON.stringify(field.fileConfig || {}),
-            ],
-          })
+          // Check if field exists, if not create new one
+          if (!fieldId || !existingFieldsMap.has(fieldId)) {
+            fieldId = crypto.randomUUID()
+            isNewField = true
+            queries.push({
+              sql: `
+                INSERT INTO form_fields (id, step_id, field_type, label, placeholder, is_required, field_order, validation_config, file_config)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              params: [
+                fieldId,
+                stepId,
+                field.type,
+                field.label,
+                field.placeholder,
+                field.required,
+                j,
+                JSON.stringify(field.validation || {}),
+                JSON.stringify(field.fileConfig || {}),
+              ],
+            })
+          } else {
+            // Update existing field
+            queries.push({
+              sql: `
+                UPDATE form_fields 
+                SET field_type = ?, label = ?, placeholder = ?, is_required = ?, field_order = ?, validation_config = ?, file_config = ?
+                WHERE id = ?
+              `,
+              params: [
+                field.type,
+                field.label,
+                field.placeholder,
+                field.required,
+                j,
+                JSON.stringify(field.validation || {}),
+                JSON.stringify(field.fileConfig || {}),
+                fieldId,
+              ],
+            })
+          }
 
-          // Add field options if they exist
+          // Handle field options
           if (field.options && field.options.length > 0) {
+            // Delete existing options for this field
+            queries.push({
+              sql: 'DELETE FROM field_options WHERE field_id = ?',
+              params: [fieldId],
+            })
+
+            // Insert new options
             for (let k = 0; k < field.options.length; k++) {
               const option = field.options[k]
               queries.push({
@@ -513,9 +561,59 @@ export class Form {
                 params: [fieldId, option.label, option.value, k],
               })
             }
+          } else {
+            // If no options provided, delete existing ones
+            queries.push({
+              sql: 'DELETE FROM field_options WHERE field_id = ?',
+              params: [fieldId],
+            })
           }
         }
       }
+
+      // If this is a new step, we need to handle fields that might have been removed
+      if (!isNewStep) {
+        // Get existing field IDs for this step
+        const existingFieldIds = existingStepsMap.get(step.id)?.fields?.map(f => f.id) || []
+        const newFieldIds = step.fields?.map(f => f.id).filter(id => id) || []
+        
+        // Find fields to delete (exist in DB but not in new data)
+        const fieldsToDelete = existingFieldIds.filter(id => !newFieldIds.includes(id))
+        
+        for (const fieldIdToDelete of fieldsToDelete) {
+          queries.push({
+            sql: 'DELETE FROM field_options WHERE field_id = ?',
+            params: [fieldIdToDelete],
+          })
+          queries.push({
+            sql: 'DELETE FROM form_fields WHERE id = ?',
+            params: [fieldIdToDelete],
+          })
+        }
+      }
+    }
+
+    // Delete steps that are no longer present
+    const newStepIds = steps.map(s => s.id).filter(id => id)
+    const existingStepIds = Array.from(existingStepsMap.keys())
+    const stepsToDelete = existingStepIds.filter(id => !newStepIds.includes(id))
+    
+    for (const stepIdToDelete of stepsToDelete) {
+      // Delete field options first
+      queries.push({
+        sql: 'DELETE FROM field_options WHERE field_id IN (SELECT id FROM form_fields WHERE step_id = ?)',
+        params: [stepIdToDelete],
+      })
+      // Delete fields
+      queries.push({
+        sql: 'DELETE FROM form_fields WHERE step_id = ?',
+        params: [stepIdToDelete],
+      })
+      // Delete step
+      queries.push({
+        sql: 'DELETE FROM form_steps WHERE id = ?',
+        params: [stepIdToDelete],
+      })
     }
 
     const result = await executeTransaction(queries)

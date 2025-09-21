@@ -14,8 +14,7 @@ const dbConfig = {
   connectionLimit: 10,
   queueLimit: 0,
   acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true,
+  // Removed invalid options: timeout, reconnect
 }
 
 // Create connection pool
@@ -37,7 +36,7 @@ export async function testConnection() {
 // Execute query with error handling
 export async function executeQuery(sql, params = []) {
   try {
-    const [rows] = await pool.execute(sql, params)
+    const [rows] = await pool.query(sql, params)
     return { success: true, data: rows }
   } catch (error) {
     console.error('Database query error:', error)

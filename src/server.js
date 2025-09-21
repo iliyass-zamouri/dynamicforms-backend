@@ -19,6 +19,8 @@ import {
 import authRoutes from './routes/auth.js'
 import formsRoutes from './routes/forms.js'
 import submissionsRoutes from './routes/submissions.js'
+import geminiRoutes from './routes/gemini.js'
+import conversationsRoutes from './routes/conversations.js'
 
 // Import database connection
 import { testConnection } from './database/connection.js'
@@ -150,6 +152,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/forms', apiLimiter, formsRoutes)
 app.use('/api/submissions', submissionLimiter, submissionsRoutes)
+app.use('/api/gemini', apiLimiter, geminiRoutes)
+app.use('/api/conversations', apiLimiter, conversationsRoutes)
 
 // Middleware CORS spécifique pour Swagger UI
 app.use('/api-docs', (req, res, next) => {
@@ -225,6 +229,12 @@ app.get('/api', (req, res) => {
         'GET /api/submissions/stats/overview': 'Get submission statistics (admin only)',
         'GET /api/submissions/stats/date-range': 'Get submissions by date range (admin only)',
         'DELETE /api/submissions/:id': 'Delete submission (admin only)',
+      },
+      gemini: {
+        'POST /api/gemini/generate': 'Generate form with Gemini AI',
+        'POST /api/gemini/modify': 'Modify existing form with Gemini AI',
+        'POST /api/gemini/analyze': 'Analyze form with Gemini AI',
+        'GET /api/gemini/health': 'Check Gemini service health',
       },
     },
   })

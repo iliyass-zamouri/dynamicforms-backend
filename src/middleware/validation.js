@@ -214,6 +214,32 @@ export const validatePagination = [
   handleValidationErrors,
 ]
 
+// Conversations validation
+export const validateConversationsQuery = [
+  query('formId')
+    .notEmpty()
+    .withMessage('Le paramètre formId est obligatoire')
+    .isUUID()
+    .withMessage('Le formId doit être un UUID valide'),
+
+  query('type')
+    .optional()
+    .isIn(['generate', 'modify', 'analyze'])
+    .withMessage('Le type doit être generate, modify ou analyze'),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('La limite doit être entre 1 et 100'),
+
+  query('offset')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("L'offset doit être un entier non négatif"),
+
+  handleValidationErrors,
+]
+
 // Success modal validation
 export const validateSuccessModal = [
   body('successModal')

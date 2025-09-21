@@ -327,6 +327,193 @@ const options = {
               example: 'https://example.com/results'
             }
           }
+        },
+        GeminiGenerateRequest: {
+          type: 'object',
+          required: ['description'],
+          properties: {
+            description: {
+              type: 'string',
+              minLength: 10,
+              maxLength: 2000,
+              description: 'Description du formulaire souhaité',
+              example: 'Je veux créer un formulaire de contact avec nom, email, sujet et message'
+            },
+            options: {
+              type: 'object',
+              properties: {
+                theme: {
+                  type: 'string',
+                  enum: ['default', 'modern', 'elegant', 'minimal', 'dark', 'colorful'],
+                  description: 'Thème du formulaire',
+                  example: 'modern'
+                },
+                primaryColor: {
+                  type: 'string',
+                  pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
+                  description: 'Couleur principale du formulaire',
+                  example: '#3b82f6'
+                },
+                includeMarketing: {
+                  type: 'boolean',
+                  description: 'Inclure les éléments marketing',
+                  example: true
+                },
+                language: {
+                  type: 'string',
+                  enum: ['fr', 'en', 'es', 'de', 'it'],
+                  description: 'Langue du formulaire',
+                  example: 'fr'
+                }
+              }
+            }
+          }
+        },
+        GeminiModifyRequest: {
+          type: 'object',
+          required: ['formId', 'instructions'],
+          properties: {
+            formId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID du formulaire à modifier',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            instructions: {
+              type: 'string',
+              minLength: 10,
+              maxLength: 1000,
+              description: 'Instructions de modification',
+              example: 'Ajouter un champ pour le numéro de téléphone et changer le thème en sombre'
+            },
+            options: {
+              type: 'object',
+              properties: {
+                preserveData: {
+                  type: 'boolean',
+                  description: 'Préserver les données existantes',
+                  example: true
+                },
+                language: {
+                  type: 'string',
+                  enum: ['fr', 'en', 'es', 'de', 'it'],
+                  description: 'Langue des instructions',
+                  example: 'fr'
+                }
+              }
+            }
+          }
+        },
+        GeminiAnalyzeRequest: {
+          type: 'object',
+          required: ['formId'],
+          properties: {
+            formId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID du formulaire à analyser',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            analysisType: {
+              type: 'string',
+              enum: ['comprehensive', 'accessibility', 'ux', 'conversion', 'seo'],
+              description: 'Type d\'analyse',
+              example: 'comprehensive'
+            }
+          }
+        },
+        GeminiResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              example: true
+            },
+            data: {
+              type: 'object',
+              properties: {
+                form: {
+                  $ref: '#/components/schemas/Form'
+                },
+                suggestions: {
+                  type: 'array',
+                  items: {
+                    type: 'string'
+                  },
+                  description: 'Suggestions d\'amélioration',
+                  example: ['Considérer ajouter un champ téléphone', 'Le formulaire pourrait bénéficier d\'une validation email renforcée']
+                },
+                changes: {
+                  type: 'array',
+                  items: {
+                    type: 'string'
+                  },
+                  description: 'Liste des changements effectués (pour les modifications)',
+                  example: ['Ajout du champ téléphone', 'Changement du thème en sombre']
+                },
+                analysis: {
+                  type: 'object',
+                  description: 'Résultats de l\'analyse (pour l\'analyse)',
+                  properties: {
+                    accessibility: {
+                      type: 'string',
+                      example: 'Score: 8/10 - Bonne structure, considérer ajouter des labels ARIA'
+                    },
+                    ux: {
+                      type: 'string',
+                      example: 'Score: 7/10 - Interface claire, améliorer la progression visuelle'
+                    },
+                    conversion: {
+                      type: 'string',
+                      example: 'Score: 6/10 - Considérer réduire le nombre d\'étapes'
+                    },
+                    seo: {
+                      type: 'string',
+                      example: 'Score: 9/10 - Excellente structure sémantique'
+                    }
+                  }
+                },
+                recommendations: {
+                  type: 'array',
+                  items: {
+                    type: 'string'
+                  },
+                  description: 'Recommandations générales',
+                  example: ['Ajouter des indicateurs de progression', 'Implémenter la validation en temps réel']
+                },
+                suggestedImprovements: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      type: {
+                        type: 'string',
+                        enum: ['field', 'step', 'validation', 'design']
+                      },
+                      suggestion: {
+                        type: 'string'
+                      },
+                      priority: {
+                        type: 'string',
+                        enum: ['high', 'medium', 'low']
+                      },
+                      impact: {
+                        type: 'string'
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            message: {
+              type: 'string',
+              example: 'Formulaire généré avec succès'
+            },
+            generatedBy: {
+              type: 'string',
+              example: 'gemini'
+            }
+          }
         }
       }
     },
@@ -347,6 +534,10 @@ const options = {
       {
         name: 'Submissions',
         description: 'Gestion des soumissions de formulaires'
+      },
+      {
+        name: 'Gemini AI',
+        description: 'Génération et modification de formulaires avec l\'IA Gemini'
       },
       {
         name: 'Health',
