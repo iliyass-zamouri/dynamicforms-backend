@@ -1,4 +1,4 @@
 # Configuration Passenger simplifiée
 PassengerAppType node
-PassengerStartupFile app-simple.cjs
+PassengerStartupFile minimal-test.js
 PassengerFriendlyErrorPages on

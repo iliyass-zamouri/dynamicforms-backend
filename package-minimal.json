@@ -1,0 +1,12 @@
+{
+  "name": "dynamic-forms-backend-minimal",
+  "version": "1.0.0",
+  "description": "Test minimal pour Passenger",
+  "main": "minimal-test.js",
+  "scripts": {
+    "start": "node minimal-test.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
