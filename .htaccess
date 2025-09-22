@@ -1,9 +1,4 @@
-# Configuration Passenger pour Dynamic Forms Backend
-PassengerAppRoot /home/wcetgwbv/dynamic-forms-backend
-PassengerBaseURI /
+# Configuration Passenger simplifiée
 PassengerAppType node
 PassengerStartupFile app-simple.cjs
-PassengerNodejs "/home/wcetgwbv/nodevenv/dynamic-forms-backend/20/bin/node"
 PassengerFriendlyErrorPages on
-PassengerRestartDir /home/wcetgwbv/dynamic-forms-backend
-PassengerMaxPoolSize 1
