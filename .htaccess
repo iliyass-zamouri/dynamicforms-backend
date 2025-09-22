@@ -5,3 +5,5 @@ PassengerAppType node
 PassengerStartupFile app.cjs
 PassengerNodejs "/home/wcetgwbv/nodevenv/dynamic-forms-backend/20/bin/node"
 PassengerFriendlyErrorPages on
+PassengerRestartDir /home/wcetgwbv/dynamic-forms-backend
+PassengerMaxPoolSize 1

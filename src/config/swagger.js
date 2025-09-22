@@ -545,7 +545,7 @@ const options = {
       }
     ]
   },
-  apis: ['./src/routes/*.js', './src/server.js']
+  apis: ['./src/routes/*.js', './app.cjs']
 }
 
 export const swaggerSpec = swaggerJsdoc(options)
