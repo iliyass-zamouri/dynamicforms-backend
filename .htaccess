@@ -4,4 +4,4 @@ PassengerBaseURI /
 PassengerAppType node
 PassengerStartupFile app.cjs
 PassengerNodejs "/home/wcetgwbv/nodevenv/dynamic-forms-backend/20/bin/node"
-PassengerFriendlyErrorPages on
+# PassengerFriendlyErrorPages on
