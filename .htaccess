@@ -1,4 +1,6 @@
-# Configuration Passenger simplifiée
+# Configuration Passenger optimisée
 PassengerAppType node
-PassengerStartupFile app-fixed.cjs
+PassengerStartupFile app-optimized.cjs
 PassengerFriendlyErrorPages on
+PassengerStartupTimeout 300
+PassengerSpawnMethod direct
