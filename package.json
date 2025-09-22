@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Node.js Express backend for Dynamic Forms application",
   "type": "module",
-  "main": "server.js",
+  "main": "app.cjs",
   "scripts": {
     "start": "node server.js",
     "dev": "node src/server-dev.js",
