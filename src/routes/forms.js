@@ -9,6 +9,7 @@ import {
   validateSuccessModal,
 } from '../middleware/validation.js'
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.js'
+import { sendErrorResponse } from '../utils/errorResponse.js'
 import { v4 as uuidv4 } from 'uuid'
 
 const router = express.Router()
@@ -111,10 +112,7 @@ router.get('/', authenticateToken, validatePagination, async (req, res) => {
     })
   } catch (error) {
     console.error('Get forms error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Erreur interne du serveur',
-    })
+    sendErrorResponse(res, error, req, 'Erreur interne du serveur', 500)
   }
 })
 
@@ -203,10 +201,7 @@ router.get('/:id', authenticateToken, validateFormId, async (req, res) => {
     })
   } catch (error) {
     console.error('Get form error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Erreur interne du serveur',
-    })
+    sendErrorResponse(res, error, req, 'Erreur interne du serveur', 500)
   }
 })
 
@@ -402,10 +397,7 @@ router.post('/', authenticateToken, validateFormCreation, async (req, res) => {
     })
   } catch (error) {
     console.error('Create form error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Erreur interne du serveur',
-    })
+    sendErrorResponse(res, error, req, 'Erreur interne du serveur', 500)
   }
 })
 

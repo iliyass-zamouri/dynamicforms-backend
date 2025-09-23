@@ -55,12 +55,32 @@ export const errorHandler = (err, req, res, next) => {
     error.message = err.message
   }
 
-  res.status(error.status).json({
+  // Prepare response
+  const response = {
     success: error.success,
     message: error.message,
     ...(error.errors && { errors: error.errors }),
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  })
+  }
+
+  // Add development debugging information
+  if (process.env.NODE_ENV === 'development') {
+    response.debug = {
+      stack: err.stack,
+      name: err.name,
+      code: err.code,
+      errno: err.errno,
+      sqlState: err.sqlState,
+      sqlMessage: err.sqlMessage,
+      timestamp: new Date().toISOString(),
+      url: req.originalUrl,
+      method: req.method,
+      userAgent: req.get('User-Agent'),
+      ip: req.ip,
+      ...(req.user && { userId: req.user.id }),
+    }
+  }
+
+  res.status(error.status).json(response)
 }
 
 // 404 handler

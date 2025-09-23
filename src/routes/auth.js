@@ -7,6 +7,7 @@ import {
   validateUserUpdate,
 } from '../middleware/validation.js'
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
+import { sendErrorResponse } from '../utils/errorResponse.js'
 import captchaService from '../services/captchaService.js'
 
 const router = express.Router()
