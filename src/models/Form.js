@@ -159,16 +159,17 @@ export class Form {
   }
 
   // Get all forms for a user
-  static async findByUserId(userId, limit = 50, offset = 0) {
+  static async findByUserId(userId, limit = 50, offset = 0, sortOrder = 'desc') {
     // Ensure we have valid numbers
     const limitNum = Number(limit) || 50
     const offsetNum = Number(offset) || 0
+    const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC'
 
     const sql = `
       SELECT f.*, 0 as submissions_count
       FROM forms f
       WHERE f.user_id = ?
-      ORDER BY f.updated_at DESC
+      ORDER BY f.updated_at ${orderDirection}
       LIMIT ? OFFSET ?
     `
 
@@ -189,15 +190,16 @@ export class Form {
   }
 
   // Get all forms (admin only)
-  static async findAll(limit = 50, offset = 0) {
+  static async findAll(limit = 50, offset = 0, sortOrder = 'desc') {
     // Ensure we have valid numbers
     const limitNum = Number(limit) || 50
     const offsetNum = Number(offset) || 0
+    const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC'
 
     const sql = `
       SELECT f.*, 0 as submissions_count
       FROM forms f
-      ORDER BY f.updated_at DESC
+      ORDER BY f.updated_at ${orderDirection}
       LIMIT ? OFFSET ?
     `
 

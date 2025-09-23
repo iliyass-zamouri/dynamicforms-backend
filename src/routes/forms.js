@@ -26,14 +26,27 @@ const router = express.Router()
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 50
+ *           default: 10
  *         description: Nombre d'éléments par page
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Numéro de page (utilisé avec limit)
  *       - in: query
  *         name: offset
  *         schema:
  *           type: integer
  *           default: 0
- *         description: Décalage de pagination
+ *         description: Décalage de pagination (alternative à page)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Ordre de tri (asc ou desc)
      *     responses:
      *       200:
      *         description: Liste des formulaires récupérée avec succès
@@ -67,22 +80,33 @@ const router = express.Router()
 // Get all forms (with pagination)
 router.get('/', authenticateToken, validatePagination, async (req, res) => {
   try {
-    const { limit = 50, offset = 0 } = req.query
+    const { limit = 10, page = 1, offset, sortOrder = 'desc' } = req.query
 
     let forms
-    const limitNum = parseInt(limit) || 50
-    const offsetNum = parseInt(offset) || 0
+    const limitNum = parseInt(limit) || 10
+    let offsetNum = parseInt(offset) || 0
+    
+    // Convert page-based pagination to offset-based if page is provided
+    if (page && !offset) {
+      offsetNum = (parseInt(page) - 1) * limitNum
+    }
 
     if (req.user.role === 'admin') {
-      forms = await Form.findAll(limitNum, offsetNum)
+      forms = await Form.findAll(limitNum, offsetNum, sortOrder)
     } else {
-      forms = await Form.findByUserId(req.user.id, limitNum, offsetNum)
+      forms = await Form.findByUserId(req.user.id, limitNum, offsetNum, sortOrder)
     }
 
     res.json({
       success: true,
       data: {
         forms: forms.map((form) => form.toJSON()),
+        pagination: {
+          page: parseInt(page) || Math.floor(offsetNum / limitNum) + 1,
+          limit: limitNum,
+          offset: offsetNum,
+          sortOrder: sortOrder
+        }
       },
     })
   } catch (error) {
