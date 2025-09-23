@@ -2,35 +2,32 @@
  * Configuration des environnements pour la documentation API
  */
 
+const getSwaggerServers = () => {
+  const apiUrl = process.env.API_URL || 'http://localhost:3000'
+  const env = process.env.NODE_ENV || 'development'
+  
+  return [
+    {
+      url: apiUrl,
+      description: `Serveur ${env}`
+    }
+  ]
+}
+
 const environments = {
   development: {
     swagger: {
-      servers: [
-        {
-          url: 'http://localhost:3000',
-          description: 'Serveur de développement'
-        }
-      ]
+      servers: getSwaggerServers()
     }
   },
   production: {
     swagger: {
-      servers: [
-        {
-          url: 'https://api.dynamicforms.com',
-          description: 'Serveur de production'
-        }
-      ]
+      servers: getSwaggerServers()
     }
   },
   staging: {
     swagger: {
-      servers: [
-        {
-          url: 'https://staging-api.dynamicforms.com',
-          description: 'Serveur de staging'
-        }
-      ]
+      servers: getSwaggerServers()
     }
   }
 }
