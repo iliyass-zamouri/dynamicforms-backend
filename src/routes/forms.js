@@ -10,6 +10,7 @@ import {
 } from '../middleware/validation.js'
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.js'
 import { sendErrorResponse } from '../utils/errorResponse.js'
+import logger from '../utils/logger.js'
 import { v4 as uuidv4 } from 'uuid'
 
 const router = express.Router()
@@ -98,10 +99,26 @@ router.get('/', authenticateToken, validatePagination, async (req, res) => {
       forms = await Form.findByUserId(req.user.id, limitNum, offsetNum, sortOrder)
     }
 
+    // Safely convert forms to JSON
+    const formsJSON = []
+    for (const form of forms) {
+      try {
+        formsJSON.push(form.toJSON())
+      } catch (formError) {
+        console.error('Error converting form to JSON:', formError, 'Form ID:', form.id)
+        logger.logError(formError, {
+          operation: 'form_to_json',
+          formId: form.id,
+          formTitle: form.title
+        })
+        // Skip this form and continue with others
+      }
+    }
+
     res.json({
       success: true,
       data: {
-        forms: forms.map((form) => form.toJSON()),
+        forms: formsJSON,
         pagination: {
           page: parseInt(page) || Math.floor(offsetNum / limitNum) + 1,
           limit: limitNum,
@@ -112,6 +129,14 @@ router.get('/', authenticateToken, validatePagination, async (req, res) => {
     })
   } catch (error) {
     console.error('Get forms error:', error)
+    console.error('Error stack:', error.stack)
+    logger.logError(error, {
+      operation: 'get_forms',
+      method: req.method,
+      url: req.url,
+      userId: req.user?.id,
+      query: req.query
+    })
     sendErrorResponse(res, error, req, 'Erreur interne du serveur', 500)
   }
 })

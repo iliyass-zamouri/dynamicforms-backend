@@ -20,7 +20,15 @@ export class Form {
     this.submissionsCount = data.submissions_count || 0
     this.marketing = data.marketing || null
     this.successModal = data.success_modal 
-      ? (typeof data.success_modal === 'string' ? JSON.parse(data.success_modal) : data.success_modal)
+      ? (typeof data.success_modal === 'string' ? 
+          (() => {
+            try {
+              return JSON.parse(data.success_modal)
+            } catch (error) {
+              console.error('Error parsing success_modal JSON:', error.message, 'Data:', data.success_modal)
+              return null
+            }
+          })() : data.success_modal)
       : null
   }
 
@@ -255,11 +263,35 @@ export class Form {
     const result = await executeQuery(sql, [formId])
 
     if (result.success) {
-      return result.data.map((step) => ({
-        id: step.id,
-        title: step.title,
-        fields: step.fields.filter((field) => field !== null),
-      }))
+      return result.data.map((step) => {
+        let fields = []
+        try {
+          // Handle different field data types
+          if (typeof step.fields === 'string') {
+            fields = JSON.parse(step.fields)
+          } else if (Array.isArray(step.fields)) {
+            fields = step.fields
+          } else if (step.fields && typeof step.fields === 'object') {
+            fields = Object.values(step.fields)
+          }
+          
+          // Ensure fields is an array and filter out null values
+          if (Array.isArray(fields)) {
+            fields = fields.filter((field) => field !== null)
+          } else {
+            fields = []
+          }
+        } catch (error) {
+          console.error('Error parsing step fields:', error, 'Step:', step.id)
+          fields = []
+        }
+        
+        return {
+          id: step.id,
+          title: step.title,
+          fields: fields,
+        }
+      })
     }
 
     return []
