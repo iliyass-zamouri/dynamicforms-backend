@@ -61,6 +61,9 @@ app.use(
         'http://127.0.0.1:8080'
       ]
       
+      // Debug log
+      console.log('CORS Origin check:', { origin, allowedOrigins, FRONTEND_URL: process.env.FRONTEND_URL })
+      
       if (allowedOrigins.includes(origin)) {
         return callback(null, true)
       }
@@ -90,7 +93,21 @@ app.use(
 
 // Handle preflight requests
 app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*')
+  const origin = req.headers.origin
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080'
+  ]
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin)
+  } else if (!origin) {
+    res.header('Access-Control-Allow-Origin', '*')
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
   res.header('Access-Control-Allow-Credentials', 'true')
@@ -139,11 +156,25 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
  */
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080'
+  ]
+  
   res.json({
     success: true,
     message: 'Le serveur fonctionne',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    cors: {
+      currentOrigin: req.headers.origin,
+      frontendUrl: process.env.FRONTEND_URL,
+      allowedOrigins: allowedOrigins,
+      isOriginAllowed: allowedOrigins.includes(req.headers.origin)
+    }
   })
 })
 
