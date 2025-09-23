@@ -242,6 +242,17 @@ app.get('/api', (req, res) => {
   })
 })
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Dynamic Forms API',
+    docs: '/api-docs',
+    health: '/health',
+    api_base: '/api'
+  })
+})
+
 // 404 handler
 app.use(notFound)
 
