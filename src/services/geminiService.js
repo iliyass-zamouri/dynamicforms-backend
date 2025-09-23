@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { Form } from '../models/Form.js'
 import { Conversation, ConversationSession } from '../models/Conversation.js'
 import { v4 as uuidv4 } from 'uuid'
+import logger from '../utils/logger.js'
 
 export class GeminiService {
   constructor() {
@@ -97,6 +98,14 @@ export class GeminiService {
         processingTimeMs: processingTime
       })
 
+      logger.logGemini('generateForm', true, {
+        userId,
+        formId: form.id,
+        isNewForm,
+        processingTimeMs: processingTime,
+        tokensUsed: this.estimateTokens(prompt + text)
+      })
+
       return {
         form: form.toJSON(),
         suggestions: formData.suggestions || [],
@@ -106,7 +115,12 @@ export class GeminiService {
         isNewForm: isNewForm
       }
     } catch (error) {
-      console.error('Erreur lors de la génération du formulaire:', error)
+      logger.logGemini('generateForm', false, {
+        userId,
+        formId,
+        error: error.message,
+        processingTimeMs: Date.now() - startTime
+      })
       throw new Error(`Erreur de génération: ${error.message}`)
     }
   }

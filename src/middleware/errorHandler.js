@@ -1,6 +1,18 @@
+import logger from '../utils/logger.js'
+
 // Global error handling middleware
 export const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err)
+  // Log the full error with stack trace
+  logger.logStackTrace(err, {
+    method: req.method,
+    url: req.url,
+    ip: req.ip || req.connection.remoteAddress,
+    userAgent: req.get('User-Agent'),
+    userId: req.user?.id || null,
+    body: req.method !== 'GET' ? req.body : undefined,
+    query: req.query,
+    params: req.params
+  })
 
   // Default error
   let error = {

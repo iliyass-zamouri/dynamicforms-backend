@@ -9,6 +9,7 @@ import {
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
 import { sendErrorResponse } from '../utils/errorResponse.js'
 import captchaService from '../services/captchaService.js'
+import logger from '../utils/logger.js'
 
 const router = express.Router()
 
@@ -122,6 +123,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     const user = await User.create({ name, email, password, role })
 
     if (!user) {
+      logger.logAuth('register', null, false, { email, reason: 'User creation failed' })
       return res.status(500).json({
         success: false,
         message: "Échec de la création de l'utilisateur",
@@ -130,6 +132,8 @@ router.post('/register', validateUserRegistration, async (req, res) => {
 
     // Generate token
     const token = generateToken(user.id, user.role)
+
+    logger.logAuth('register', user.id, true, { email, role })
 
     res.status(201).json({
       success: true,
@@ -140,7 +144,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       },
     })
   } catch (error) {
-    console.error('Registration error:', error)
+    logger.logError(error, { action: 'user_registration', email: req.body.email })
     res.status(500).json({
       success: false,
       message: 'Erreur interne du serveur',

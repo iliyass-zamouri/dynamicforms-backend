@@ -1,5 +1,6 @@
 import { executeQuery } from '../database/connection.js'
 import bcrypt from 'bcryptjs'
+import logger from '../utils/logger.js'
 
 export class User {
   constructor(data) {
@@ -15,22 +16,53 @@ export class User {
   // Create a new user
   static async create(userData) {
     const { email, name, password, role = 'user' } = userData
+    const startTime = Date.now()
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    logger.logTrace('user_create_start', { email, role })
 
-    const sql = `
-      INSERT INTO users (id, email, name, password, role) 
-      VALUES (UUID(), ?, ?, ?, ?)
-    `
+    try {
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10)
 
-    const result = await executeQuery(sql, [email, name, hashedPassword, role])
+      const sql = `
+        INSERT INTO users (id, email, name, password, role) 
+        VALUES (UUID(), ?, ?, ?, ?)
+      `
 
-    if (result.success) {
-      return await User.findById(result.data.insertId)
+      const result = await executeQuery(sql, [email, name, hashedPassword, role])
+
+      if (result.success) {
+        const user = await User.findById(result.data.insertId)
+        const duration = Date.now() - startTime
+        
+        logger.logTrace('user_create_success', { 
+          userId: user?.id, 
+          email, 
+          role, 
+          duration: `${duration}ms` 
+        })
+        
+        return user
+      }
+
+      logger.logTrace('user_create_failed', { 
+        email, 
+        reason: 'Database insert failed',
+        duration: `${Date.now() - startTime}ms`
+      })
+
+      return null
+    } catch (error) {
+      const duration = Date.now() - startTime
+      
+      logger.logError(error, {
+        operation: 'user_create',
+        email,
+        duration: `${duration}ms`
+      })
+      
+      throw error
     }
-
-    return null
   }
 
   // Find user by ID
@@ -47,13 +79,27 @@ export class User {
 
   // Find user by email
   static async findByEmail(email) {
+    const startTime = Date.now()
     const sql = 'SELECT * FROM users WHERE email = ?'
+    
+    logger.logTrace('user_find_by_email', { email })
+    
     const result = await executeQuery(sql, [email])
+    const duration = Date.now() - startTime
 
     if (result.success && result.data.length > 0) {
+      logger.logTrace('user_find_by_email_success', { 
+        email, 
+        userId: result.data[0].id,
+        duration: `${duration}ms`
+      })
       return new User(result.data[0])
     }
 
+    logger.logTrace('user_find_by_email_not_found', { 
+      email, 
+      duration: `${duration}ms`
+    })
     return null
   }
 
