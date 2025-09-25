@@ -8,17 +8,27 @@ const __dirname = path.dirname(__filename)
 
 async function runMigration() {
   try {
-    console.log('Running migration: remove_success_modal_index...')
+    const migrationArg = process.argv[2]
+    const migrationFile = migrationArg && migrationArg.trim().length > 0
+      ? migrationArg.trim()
+      : 'remove_success_modal_index.sql'
+
+    console.log(`Running migration: ${migrationFile}...`)
 
     // Read the migration file
-    const migrationPath = path.join(__dirname, 'migrations', 'remove_success_modal_index.sql')
+    const migrationPath = path.join(__dirname, 'migrations', migrationFile)
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8')
 
-    // Split the SQL into individual statements
-    const statements = migrationSQL
+    // Remove comment lines and split into individual statements
+    const cleanedSQL = migrationSQL
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('--'))
+      .join('\n')
+
+    const statements = cleanedSQL
       .split(';')
       .map((stmt) => stmt.trim())
-      .filter((stmt) => stmt.length > 0 && !stmt.startsWith('--'))
+      .filter((stmt) => stmt.length > 0)
 
     // Execute each statement
     for (const statement of statements) {

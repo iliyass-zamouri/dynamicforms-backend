@@ -398,6 +398,21 @@ router.get('/slug/:slug', optionalAuth, async (req, res) => {
 // Create new form
 router.post('/', authenticateToken, validateFormCreation, async (req, res) => {
   try {
+    // Check if user can create more forms
+    const canCreateForm = await req.user.canCreateForm()
+    
+    if (!canCreateForm) {
+      const preferences = await req.user.getPreferences()
+      return res.status(403).json({
+        success: false,
+        message: `Limite de formulaires atteinte. Votre plan ${preferences.accountType} permet ${preferences.maxForms} formulaires maximum.`,
+        data: {
+          limit: preferences.maxForms,
+          accountType: preferences.accountType
+        }
+      })
+    }
+
     const formData = {
       ...req.body,
       userId: req.user.id,

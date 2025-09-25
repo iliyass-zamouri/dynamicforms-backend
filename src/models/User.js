@@ -1,6 +1,7 @@
 import { executeQuery } from '../database/connection.js'
 import bcrypt from 'bcryptjs'
 import logger from '../utils/logger.js'
+import { UserPreferences } from './UserPreferences.js'
 
 export class User {
   constructor(data) {
@@ -170,6 +171,55 @@ export class User {
     }
 
     return 0
+  }
+
+  // Get user preferences
+  async getPreferences() {
+    let preferences = await UserPreferences.findByUserId(this.id)
+    
+    // Create default preferences if none exist
+    if (!preferences) {
+      const accountType = this.role === 'admin' ? 'enterprise' : 'free'
+      preferences = await UserPreferences.createDefault(this.id, accountType)
+    }
+    
+    return preferences
+  }
+
+  // Check if user can create more forms
+  async canCreateForm() {
+    const preferences = await this.getPreferences()
+    return await preferences.canCreateForm()
+  }
+
+  // Check if user can create more submissions for a form
+  async canCreateSubmission(formId) {
+    const preferences = await this.getPreferences()
+    return await preferences.canCreateSubmission(formId)
+  }
+
+  // Check if user can export forms
+  async canExportForm() {
+    const preferences = await this.getPreferences()
+    return await preferences.canExportForm()
+  }
+
+  // Check if user can export submissions
+  async canExportSubmission() {
+    const preferences = await this.getPreferences()
+    return await preferences.canExportSubmission()
+  }
+
+  // Check if user can export a specific form (within limits)
+  async canExportFormWithinLimits(formId) {
+    const preferences = await this.getPreferences()
+    return await preferences.canExportFormWithinLimits(formId)
+  }
+
+  // Check if user can export a specific submission (within limits)
+  async canExportSubmissionWithinLimits(submissionId) {
+    const preferences = await this.getPreferences()
+    return await preferences.canExportSubmissionWithinLimits(submissionId)
   }
 
   // Convert to JSON (exclude password)

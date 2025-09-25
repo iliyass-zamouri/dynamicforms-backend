@@ -22,6 +22,7 @@ import formsRoutes from './routes/forms.js'
 import submissionsRoutes from './routes/submissions.js'
 import geminiRoutes from './routes/gemini.js'
 import conversationsRoutes from './routes/conversations.js'
+import preferencesRoutes from './routes/preferences.js'
 
 // Import database connection (for health checks or readiness if needed)
 import { testConnection } from './database/connection.js'
@@ -194,6 +195,7 @@ app.use('/api/forms', apiLimiter, formsRoutes)
 app.use('/api/submissions', submissionLimiter, submissionsRoutes)
 app.use('/api/gemini', apiLimiter, geminiRoutes)
 app.use('/api/conversations', apiLimiter, conversationsRoutes)
+app.use('/api/preferences', apiLimiter, preferencesRoutes)
 
 // Middleware CORS spécifique pour Swagger UI
 app.use('/api-docs', (req, res, next) => {
@@ -279,6 +281,14 @@ app.get('/api', (req, res) => {
         'POST /api/gemini/modify': 'Modify existing form with Gemini AI',
         'POST /api/gemini/analyze': 'Analyze form with Gemini AI',
         'GET /api/gemini/health': 'Check Gemini service health',
+      },
+      preferences: {
+        'GET /api/preferences': 'Get current user preferences',
+        'PUT /api/preferences': 'Update current user preferences',
+        'GET /api/preferences/admin': 'Get all user preferences (admin only)',
+        'GET /api/preferences/admin/:userId': 'Get specific user preferences (admin only)',
+        'PUT /api/preferences/admin/:userId': 'Update specific user preferences (admin only)',
+        'POST /api/preferences/admin/:userId/reset': 'Reset user preferences to default (admin only)',
       },
     },
   })

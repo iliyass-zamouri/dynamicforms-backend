@@ -132,6 +132,23 @@ router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
       }
     }
 
+    // Check if user can create more submissions for this form (if authenticated)
+    if (req.user) {
+      const canCreateSubmission = await req.user.canCreateSubmission(form.id)
+      
+      if (!canCreateSubmission) {
+        const preferences = await req.user.getPreferences()
+        return res.status(403).json({
+          success: false,
+          message: `Limite de soumissions atteinte pour ce formulaire. Votre plan ${preferences.accountType} permet ${preferences.maxSubmissionsPerForm} soumissions maximum par formulaire.`,
+          data: {
+            limit: preferences.maxSubmissionsPerForm,
+            accountType: preferences.accountType
+          }
+        })
+      }
+    }
+
     // Create submission
     const submission = await FormSubmission.create({
       formId: form.id,

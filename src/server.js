@@ -21,6 +21,9 @@ import formsRoutes from './routes/forms.js'
 import submissionsRoutes from './routes/submissions.js'
 import geminiRoutes from './routes/gemini.js'
 import conversationsRoutes from './routes/conversations.js'
+import preferencesRoutes from './routes/preferences.js'
+import accountTypesRoutes from './routes/accountTypes.js'
+import paymentRoutes from './routes/payment.js'
 
 // Import database connection
 import { testConnection } from './database/connection.js'
@@ -156,6 +159,9 @@ app.use('/api/forms', apiLimiter, formsRoutes)
 app.use('/api/submissions', submissionLimiter, submissionsRoutes)
 app.use('/api/gemini', apiLimiter, geminiRoutes)
 app.use('/api/conversations', apiLimiter, conversationsRoutes)
+app.use('/api/preferences', apiLimiter, preferencesRoutes)
+app.use('/api/account-types', apiLimiter, accountTypesRoutes)
+app.use('/api/payment', apiLimiter, paymentRoutes)
 
 // Middleware CORS spécifique pour Swagger UI
 app.use('/api-docs', (req, res, next) => {
@@ -237,6 +243,23 @@ app.get('/api', (req, res) => {
         'POST /api/gemini/modify': 'Modify existing form with Gemini AI',
         'POST /api/gemini/analyze': 'Analyze form with Gemini AI',
         'GET /api/gemini/health': 'Check Gemini service health',
+      },
+      preferences: {
+        'GET /api/preferences': 'Get current user preferences',
+        'PUT /api/preferences': 'Update current user preferences',
+        'GET /api/preferences/admin': 'Get all user preferences (admin only)',
+        'GET /api/preferences/admin/:userId': 'Get specific user preferences (admin only)',
+        'PUT /api/preferences/admin/:userId': 'Update specific user preferences (admin only)',
+        'POST /api/preferences/admin/:userId/reset': 'Reset user preferences to default (admin only)',
+      },
+      accountTypes: {
+        'GET /api/account-types': 'Get all account types',
+        'GET /api/account-types/:id': 'Get account type by ID',
+        'GET /api/account-types/name/:name': 'Get account type by name',
+        'POST /api/account-types': 'Create new account type (admin only)',
+        'PUT /api/account-types/:id': 'Update account type (admin only)',
+        'POST /api/account-types/:id/set-default': 'Set account type as default (admin only)',
+        'DELETE /api/account-types/:id': 'Delete account type (admin only)',
       },
     },
   })
