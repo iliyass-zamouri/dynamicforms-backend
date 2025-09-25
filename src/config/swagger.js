@@ -422,6 +422,118 @@ const options = {
             }
           }
         },
+        AccountType: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID unique du type de compte',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            name: {
+              type: 'string',
+              description: 'Nom unique du type de compte',
+              example: 'pro'
+            },
+            displayName: {
+              type: 'string',
+              description: 'Nom d\'affichage du type de compte',
+              example: 'Plan Pro'
+            },
+            description: {
+              type: 'string',
+              description: 'Description du type de compte',
+              example: 'Plan avancé avec des fonctionnalités professionnelles'
+            },
+            maxForms: {
+              type: 'integer',
+              minimum: 0,
+              description: 'Nombre maximum de formulaires',
+              example: 25
+            },
+            maxSubmissionsPerForm: {
+              type: 'integer',
+              minimum: 0,
+              description: 'Nombre maximum de soumissions par formulaire',
+              example: 1000
+            },
+            canExportForms: {
+              type: 'boolean',
+              description: 'Peut exporter les formulaires',
+              example: true
+            },
+            canExportSubmissions: {
+              type: 'boolean',
+              description: 'Peut exporter les soumissions',
+              example: true
+            },
+            maxExportsPerForm: {
+              type: 'integer',
+              minimum: 0,
+              description: 'Nombre maximum d\'exports par formulaire',
+              example: 50
+            },
+            maxExportsPerSubmission: {
+              type: 'integer',
+              minimum: 0,
+              description: 'Nombre maximum d\'exports par soumission',
+              example: 50
+            },
+            features: {
+              type: 'object',
+              description: 'Fonctionnalités supplémentaires',
+              example: {
+                support: 'priority',
+                analytics: true,
+                customDomains: 3,
+                apiAccess: true
+              }
+            },
+            priceMonthly: {
+              type: 'number',
+              minimum: 0,
+              description: 'Prix mensuel',
+              example: 29.99
+            },
+            priceYearly: {
+              type: 'number',
+              minimum: 0,
+              description: 'Prix annuel',
+              example: 299.99
+            },
+            currency: {
+              type: 'string',
+              description: 'Code de la devise',
+              example: 'USD'
+            },
+            currencySymbol: {
+              type: 'string',
+              description: 'Symbole de la devise pour l\'affichage',
+              example: '$'
+            },
+            isActive: {
+              type: 'boolean',
+              description: 'Si le type de compte est actif',
+              example: true
+            },
+            isDefault: {
+              type: 'boolean',
+              description: 'Si c\'est le type de compte par défaut',
+              example: false
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de création'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de dernière mise à jour'
+            }
+          }
+        },
         GeminiResponse: {
           type: 'object',
           properties: {
@@ -534,6 +646,10 @@ const options = {
       {
         name: 'Submissions',
         description: 'Gestion des soumissions de formulaires'
+      },
+      {
+        name: 'Account Types',
+        description: 'Gestion des types de comptes et tarification'
       },
       {
         name: 'Gemini AI',

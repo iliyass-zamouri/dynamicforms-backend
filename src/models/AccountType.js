@@ -17,6 +17,7 @@ export class AccountType {
     this.priceMonthly = data.price_monthly
     this.priceYearly = data.price_yearly
     this.currency = data.currency
+    this.currencySymbol = data.currency_symbol
     this.isActive = data.is_active
     this.isDefault = data.is_default
     this.createdAt = data.created_at
@@ -36,8 +37,8 @@ export class AccountType {
         INSERT INTO account_types (
           id, name, display_name, description, max_forms, max_submissions_per_form,
           can_export_forms, can_export_submissions, max_exports_per_form, max_exports_per_submission,
-          features, price_monthly, price_yearly, currency, is_active, is_default
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          features, price_monthly, price_yearly, currency, currency_symbol, is_active, is_default
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
 
       const result = await executeQuery(sql, [
@@ -55,6 +56,7 @@ export class AccountType {
         accountTypeData.priceMonthly,
         accountTypeData.priceYearly,
         accountTypeData.currency,
+        accountTypeData.currencySymbol || '$',
         accountTypeData.isActive !== false,
         accountTypeData.isDefault || false
       ])
@@ -204,6 +206,7 @@ export class AccountType {
       'priceMonthly',
       'priceYearly',
       'currency',
+      'currencySymbol',
       'isActive',
       'isDefault'
     ]
@@ -222,6 +225,7 @@ export class AccountType {
                        key === 'maxExportsPerSubmission' ? 'max_exports_per_submission' :
                        key === 'priceMonthly' ? 'price_monthly' :
                        key === 'priceYearly' ? 'price_yearly' :
+                       key === 'currencySymbol' ? 'currency_symbol' :
                        key === 'isActive' ? 'is_active' :
                        key === 'isDefault' ? 'is_default' : key
 
@@ -311,6 +315,7 @@ export class AccountType {
       priceMonthly: this.priceMonthly,
       priceYearly: this.priceYearly,
       currency: this.currency,
+      currencySymbol: this.currencySymbol,
       isActive: this.isActive,
       isDefault: this.isDefault,
       createdAt: this.createdAt,

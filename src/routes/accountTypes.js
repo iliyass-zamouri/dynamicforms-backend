@@ -284,6 +284,10 @@ router.get('/name/:name', authenticateToken, async (req, res) => {
  *                 type: string
  *                 description: Currency code
  *                 example: "USD"
+ *               currencySymbol:
+ *                 type: string
+ *                 description: Currency symbol for display
+ *                 example: "$"
  *               isActive:
  *                 type: boolean
  *                 description: Whether the account type is active
@@ -347,6 +351,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       priceMonthly = 0,
       priceYearly = 0,
       currency = 'USD',
+      currencySymbol = '$',
       isActive = true,
       isDefault = false
     } = req.body
@@ -384,6 +389,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       priceMonthly,
       priceYearly,
       currency,
+      currencySymbol,
       isActive,
       isDefault
     })
@@ -473,6 +479,9 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
  *               currency:
  *                 type: string
  *                 description: Currency code
+ *               currencySymbol:
+ *                 type: string
+ *                 description: Currency symbol for display
  *               isActive:
  *                 type: boolean
  *                 description: Whether the account type is active
