@@ -1,4 +1,5 @@
 import express from 'express'
+import crypto from 'crypto'
 import { Form } from '../models/Form.js'
 import { FormSubmission } from '../models/FormSubmission.js'
 import {
@@ -413,10 +414,26 @@ router.post('/', authenticateToken, validateFormCreation, async (req, res) => {
       })
     }
 
+    // Handle slug availability checking
+    let finalSlug
+    if (req.body.slug) {
+      const isAvailable = await Form.isSlugAvailable(req.body.slug)
+      if (isAvailable) {
+        // Slug is available, use it as-is
+        finalSlug = req.body.slug
+      } else {
+        // Slug is not available, add random string to user's slug
+        finalSlug = req.body.slug + '-' + crypto.randomUUID().substring(0, 8)
+      }
+    } else {
+      // No slug provided, generate one from title
+      finalSlug = generateSlug(req.body.title)
+    }
+
     const formData = {
       ...req.body,
       userId: req.user.id,
-      slug: req.body.slug || generateSlug(req.body.title),
+      slug: finalSlug,
     }
 
     const form = await Form.create(formData)

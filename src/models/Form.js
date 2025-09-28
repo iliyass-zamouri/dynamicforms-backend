@@ -47,6 +47,7 @@ export class Form {
       emailNotifications = false,
       userId,
       steps = [],
+      successModal,
     } = formData
 
     const formId = crypto.randomUUID()
@@ -55,8 +56,8 @@ export class Form {
       {
         sql: `
           INSERT INTO forms (id, slug, title, description, status, allow_multiple_submissions,
-                           require_authentication, theme, primary_color, notification_email, email_notifications, user_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           require_authentication, theme, primary_color, notification_email, email_notifications, user_id, success_modal)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         params: [
           formId,
@@ -71,6 +72,7 @@ export class Form {
           notificationEmail || null,
           emailNotifications !== undefined ? emailNotifications : false,
           userId || null,
+          successModal ? JSON.stringify(successModal) : null,
         ],
       },
     ]
@@ -164,6 +166,18 @@ export class Form {
     }
 
     return null
+  }
+
+  // Check if slug is available (not used by any form)
+  static async isSlugAvailable(slug) {
+    const sql = 'SELECT COUNT(*) as count FROM forms WHERE slug = ?'
+    const result = await executeQuery(sql, [slug])
+
+    if (result.success && result.data.length > 0) {
+      return result.data[0].count === 0
+    }
+
+    return false
   }
 
   // Get all forms for a user
@@ -681,11 +695,21 @@ export class Form {
       const existingForm = await Form.findById(id)
       
       if (existingForm) {
+        // Check slug availability if slug is being changed
+        let finalSlug = formData.slug
+        if (formData.slug && formData.slug !== existingForm.slug) {
+          const isAvailable = await Form.isSlugAvailable(formData.slug)
+          if (!isAvailable) {
+            // Slug is not available, add random string to user's slug
+            finalSlug = formData.slug + '-' + crypto.randomUUID().substring(0, 8)
+          }
+        }
+
         // Update existing form
         const updateData = {
           title: formData.title,
           description: formData.description,
-          slug: formData.slug,
+          slug: finalSlug,
           status: formData.status || 'draft',
           allowMultipleSubmissions: formData.allowMultipleSubmissions !== undefined ? formData.allowMultipleSubmissions : true,
           requireAuthentication: formData.requireAuthentication !== undefined ? formData.requireAuthentication : false,
@@ -725,10 +749,27 @@ export class Form {
 
     // Create new form if no ID provided or form not found
     if (!id || !form) {
+      let finalSlug
+      
+      // If user specified a slug, check if it's available
+      if (formData.slug) {
+        const isAvailable = await Form.isSlugAvailable(formData.slug)
+        if (isAvailable) {
+          // Slug is available, use it as-is
+          finalSlug = formData.slug
+        } else {
+          // Slug is not available, add random string to user's slug
+          finalSlug = formData.slug + '-' + crypto.randomUUID().substring(0, 8)
+        }
+      } else {
+        // No slug provided, generate one from title
+        finalSlug = this.generateSlug(formData.title)
+      }
+
       const newFormData = {
         title: formData.title,
         description: formData.description,
-        slug: formData.slug || this.generateSlug(formData.title),
+        slug: finalSlug,
         status: formData.status || 'draft',
         allowMultipleSubmissions: formData.allowMultipleSubmissions !== undefined ? formData.allowMultipleSubmissions : true,
         requireAuthentication: formData.requireAuthentication !== undefined ? formData.requireAuthentication : false,
@@ -738,6 +779,7 @@ export class Form {
         emailNotifications: formData.emailNotifications !== undefined ? formData.emailNotifications : false,
         userId: userId,
         steps: steps || [],
+        successModal: successModal,
       }
 
       form = await Form.create(newFormData)
