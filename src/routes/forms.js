@@ -1387,6 +1387,234 @@ router.put('/:id/success-modal', authenticateToken, validateFormId, async (req, 
   }
 })
 
+/**
+ * @swagger
+ * /api/forms/import:
+ *   post:
+ *     summary: Importer un formulaire complet avec toutes les données
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID du formulaire (optionnel, pour mise à jour)
+ *               title:
+ *                 type: string
+ *                 description: Titre du formulaire
+ *                 example: "Formulaire de contact"
+ *               description:
+ *                 type: string
+ *                 description: Description du formulaire
+ *               slug:
+ *                 type: string
+ *                 description: Slug unique du formulaire
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, draft]
+ *                 default: draft
+ *               allowMultipleSubmissions:
+ *                 type: boolean
+ *                 default: true
+ *               requireAuthentication:
+ *                 type: boolean
+ *                 default: false
+ *               theme:
+ *                 type: string
+ *                 default: default
+ *               primaryColor:
+ *                 type: string
+ *                 pattern: '^#[0-9A-Fa-f]{6}$'
+ *                 default: '#3b82f6'
+ *               notificationEmail:
+ *                 type: string
+ *                 format: email
+ *               emailNotifications:
+ *                 type: boolean
+ *                 default: false
+ *               steps:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/FormStep'
+ *                 description: Étapes du formulaire
+ *               marketing:
+ *                 type: object
+ *                 description: Paramètres marketing du formulaire
+ *                 properties:
+ *                   sidebar:
+ *                     type: object
+ *                     properties:
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       logo:
+ *                         type: string
+ *                       enabled:
+ *                         type: boolean
+ *                       socialMedia:
+ *                         type: object
+ *                         properties:
+ *                           enabled:
+ *                             type: boolean
+ *                           title:
+ *                             type: string
+ *                           buttons:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 platform:
+ *                                   type: string
+ *                                 url:
+ *                                   type: string
+ *                                 icon:
+ *                                   type: string
+ *                                 enabled:
+ *                                   type: boolean
+ *                                 order:
+ *                                   type: integer
+ *                       footer:
+ *                         type: object
+ *                         properties:
+ *                           text:
+ *                             type: string
+ *               successModal:
+ *                 type: object
+ *                 description: Configuration du modal de succès
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *                   actions:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                         url:
+ *                           type: string
+ *                   closeEnabled:
+ *                     type: boolean
+ *                   returnHomeEnabled:
+ *                     type: boolean
+ *                   resubmitEnabled:
+ *                     type: boolean
+ *     responses:
+ *       200:
+ *         description: Formulaire importé/mis à jour avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         form:
+ *                           $ref: '#/components/schemas/Form'
+ *                         operation:
+ *                           type: string
+ *                           enum: [created, updated]
+ *       400:
+ *         description: Données de formulaire invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Token d'authentification invalide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+// Import form endpoint (create or update)
+router.post('/import', authenticateToken, async (req, res) => {
+  try {
+    const formData = req.body
+    const { id } = formData
+
+    // Check if form ID is provided for update and validate ownership
+    if (id) {
+      const existingForm = await Form.findById(id)
+      
+      if (existingForm) {
+        // Check if user owns the form or is admin
+        if (req.user.role !== 'admin' && existingForm.userId !== req.user.id) {
+          return res.status(403).json({
+            success: false,
+            message: 'Accès refusé',
+          })
+        }
+      }
+    } else {
+      // Check if user can create more forms (only for new forms)
+      const canCreateForm = await req.user.canCreateForm()
+      
+      if (!canCreateForm) {
+        const preferences = await req.user.getPreferences()
+        return res.status(403).json({
+          success: false,
+          message: `Limite de formulaires atteinte. Votre plan ${preferences.accountType} permet ${preferences.maxForms} formulaires maximum.`,
+          data: {
+            limit: preferences.maxForms,
+            accountType: preferences.accountType
+          }
+        })
+      }
+    }
+
+    // Use the Form.import method
+    const result = await Form.import(formData, req.user.id)
+
+    res.json({
+      success: true,
+      message: `Formulaire ${result.operation === 'created' ? 'créé' : 'mis à jour'} avec succès`,
+      data: {
+        form: result.form.toJSON(),
+        operation: result.operation,
+      },
+    })
+  } catch (error) {
+    console.error('Import form error:', error)
+    logger.logError(error, {
+      operation: 'import_form',
+      method: req.method,
+      url: req.url,
+      userId: req.user?.id,
+      formId: req.body?.id
+    })
+    
+    // Handle specific error messages
+    if (error.message.includes('requis') || error.message.includes('Échec')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      })
+    }
+    
+    sendErrorResponse(res, error, req, 'Erreur interne du serveur', 500)
+  }
+})
+
 // Helper function to generate slug
 function generateSlug(title) {
   return (

@@ -70,7 +70,7 @@ export class Form {
           primaryColor || '#3b82f6',
           notificationEmail || null,
           emailNotifications !== undefined ? emailNotifications : false,
-          userId,
+          userId || null,
         ],
       },
     ]
@@ -83,7 +83,7 @@ export class Form {
 
         queries.push({
           sql: 'INSERT INTO form_steps (id, form_id, title, step_order) VALUES (?, ?, ?, ?)',
-          params: [stepId, formId, step.title, i],
+          params: [stepId, formId, step.title || null, i],
         })
 
         // Add fields for this step
@@ -100,11 +100,11 @@ export class Form {
               params: [
                 fieldId,
                 stepId,
-                field.type,
-                field.label,
-                field.placeholder,
-                field.required,
-                j,
+                field.type || null,
+                field.label || null,
+                field.placeholder || null,
+                field.required !== undefined ? field.required : false,
+                field.order,
                 JSON.stringify(field.validation || {}),
                 JSON.stringify(field.fileConfig || {}),
               ],
@@ -116,7 +116,7 @@ export class Form {
                 const option = field.options[k]
                 queries.push({
                   sql: 'INSERT INTO field_options (id, field_id, label, value, option_order) VALUES (UUID(), ?, ?, ?, ?)',
-                  params: [fieldId, option.label, option.value, k],
+                  params: [fieldId, option.label || null, option.value || null, k],
                 })
               }
             }
@@ -520,13 +520,13 @@ export class Form {
         isNewStep = true
         queries.push({
           sql: 'INSERT INTO form_steps (id, form_id, title, step_order) VALUES (?, ?, ?, ?)',
-          params: [stepId, this.id, step.title, i],
+          params: [stepId, this.id, step.title || null, i],
         })
       } else {
         // Update existing step
         queries.push({
           sql: 'UPDATE form_steps SET title = ?, step_order = ? WHERE id = ?',
-          params: [step.title, i, stepId],
+          params: [step.title || null, i, stepId],
         })
       }
 
@@ -536,7 +536,7 @@ export class Form {
           const field = step.fields[j]
           let fieldId = field.id
           let isNewField = false
-
+          
           // Check if field exists, if not create new one
           if (!fieldId || !existingFieldsMap.has(fieldId)) {
             fieldId = crypto.randomUUID()
@@ -549,17 +549,17 @@ export class Form {
               params: [
                 fieldId,
                 stepId,
-                field.type,
-                field.label,
-                field.placeholder,
-                field.required,
-                j,
+                field.type || null,
+                field.label || null,
+                field.placeholder || null,
+                field.required !== undefined ? field.required : false,
+                field.order,
                 JSON.stringify(field.validation || {}),
                 JSON.stringify(field.fileConfig || {}),
               ],
             })
           } else {
-            // Update existing field
+            // Update existing field - use the order from request body
             queries.push({
               sql: `
                 UPDATE form_fields 
@@ -567,11 +567,11 @@ export class Form {
                 WHERE id = ?
               `,
               params: [
-                field.type,
-                field.label,
-                field.placeholder,
-                field.required,
-                j,
+                field.type || null,
+                field.label || null,
+                field.placeholder || null,
+                field.required !== undefined ? field.required : false,
+                field.order,
                 JSON.stringify(field.validation || {}),
                 JSON.stringify(field.fileConfig || {}),
                 fieldId,
@@ -592,7 +592,7 @@ export class Form {
               const option = field.options[k]
               queries.push({
                 sql: 'INSERT INTO field_options (id, field_id, label, value, option_order) VALUES (UUID(), ?, ?, ?, ?)',
-                params: [fieldId, option.label, option.value, k],
+                params: [fieldId, option.label || null, option.value || null, k],
               })
             }
           } else {
@@ -651,6 +651,8 @@ export class Form {
     }
 
     const result = await executeTransaction(queries)
+    
+    
     return result.success
   }
 
@@ -659,6 +661,123 @@ export class Form {
     const sql = 'DELETE FROM forms WHERE id = ?'
     const result = await executeQuery(sql, [this.id])
     return result.success
+  }
+
+  // Import form (create or update with full data)
+  static async import(formData, userId) {
+    const { id, title, steps, marketing, successModal } = formData
+
+    // Validate required fields
+    if (!title) {
+      throw new Error('Le titre du formulaire est requis')
+    }
+
+    let form
+    let operation = 'created'
+
+    // Check if form ID is provided for update
+    if (id) {
+      // Try to find existing form
+      const existingForm = await Form.findById(id)
+      
+      if (existingForm) {
+        // Update existing form
+        const updateData = {
+          title: formData.title,
+          description: formData.description,
+          slug: formData.slug,
+          status: formData.status || 'draft',
+          allowMultipleSubmissions: formData.allowMultipleSubmissions !== undefined ? formData.allowMultipleSubmissions : true,
+          requireAuthentication: formData.requireAuthentication !== undefined ? formData.requireAuthentication : false,
+          theme: formData.theme || 'default',
+          primaryColor: formData.primaryColor || '#3b82f6',
+          notificationEmail: formData.notificationEmail,
+          emailNotifications: formData.emailNotifications !== undefined ? formData.emailNotifications : false,
+          successModal: successModal,
+        }
+
+        // Update form basic data
+        const updateSuccess = await existingForm.update(updateData)
+        if (!updateSuccess) {
+          throw new Error('Échec de la mise à jour du formulaire')
+        }
+
+        // Update steps if provided
+        if (steps && Array.isArray(steps)) {
+          const stepsSuccess = await existingForm.updateSteps(steps)
+          if (!stepsSuccess) {
+            throw new Error('Échec de la mise à jour des étapes du formulaire')
+          }
+        }
+
+        // Update marketing settings if provided
+        if (marketing) {
+          const marketingSuccess = await Form.saveMarketingSettings(id, marketing)
+          if (!marketingSuccess) {
+            throw new Error('Échec de la mise à jour des paramètres marketing')
+          }
+        }
+
+        form = existingForm
+        operation = 'updated'
+      }
+    }
+
+    // Create new form if no ID provided or form not found
+    if (!id || !form) {
+      const newFormData = {
+        title: formData.title,
+        description: formData.description,
+        slug: formData.slug || this.generateSlug(formData.title),
+        status: formData.status || 'draft',
+        allowMultipleSubmissions: formData.allowMultipleSubmissions !== undefined ? formData.allowMultipleSubmissions : true,
+        requireAuthentication: formData.requireAuthentication !== undefined ? formData.requireAuthentication : false,
+        theme: formData.theme || 'default',
+        primaryColor: formData.primaryColor || '#3b82f6',
+        notificationEmail: formData.notificationEmail,
+        emailNotifications: formData.emailNotifications !== undefined ? formData.emailNotifications : false,
+        userId: userId,
+        steps: steps || [],
+      }
+
+      form = await Form.create(newFormData)
+
+      if (!form) {
+        throw new Error('Échec de la création du formulaire')
+      }
+
+      // Save marketing settings if provided
+      if (marketing) {
+        const marketingSuccess = await Form.saveMarketingSettings(form.id, marketing)
+        if (!marketingSuccess) {
+          console.warn('Failed to save marketing settings for new form:', form.id)
+        }
+      }
+
+      operation = 'created'
+    }
+
+    // Get the final form with all data
+    const finalForm = await Form.findById(form.id)
+
+    return {
+      form: finalForm,
+      operation
+    }
+  }
+
+  // Helper method to generate slug
+  static generateSlug(title) {
+    return (
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim('-') +
+      '-' +
+      crypto.randomUUID().substring(0, 8)
+    )
   }
 
   // Convert to JSON
