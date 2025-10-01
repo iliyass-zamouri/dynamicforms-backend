@@ -2,7 +2,7 @@ import express from 'express'
 import { SubscriptionService } from '../services/subscriptionService.js'
 import { AccountType } from '../models/AccountType.js'
 import { Subscription } from '../models/Subscription.js'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, optionalAuth } from '../middleware/auth.js'
 import logger from '../utils/logger.js'
 import PaymentService from '../services/paymentService.js'
 
@@ -240,8 +240,16 @@ router.get('/history', authenticateToken, async (req, res) => {
  * @swagger
  * /api/subscriptions/available-plans:
  *   get:
- *     summary: Get all available subscription plans
+ *     summary: Get all available subscription plans with upgrade/downgrade flags
  *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         schema:
+ *           type: string
+ *         description: Bearer token (optional - if provided, includes upgrade/downgrade flags)
  *     responses:
  *       200:
  *         description: Available plans retrieved successfully
@@ -255,7 +263,25 @@ router.get('/history', authenticateToken, async (req, res) => {
  *                     data:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/AccountType'
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/AccountType'
+ *                           - type: object
+ *                             properties:
+ *                               canSelect:
+ *                                 type: boolean
+ *                                 description: Whether the user can select this plan
+ *                               reason:
+ *                                 type: string
+ *                                 description: Reason for canSelect status
+ *                               isUpgrade:
+ *                                 type: boolean
+ *                                 description: Whether this is an upgrade from current plan (only when authenticated)
+ *                               isDowngrade:
+ *                                 type: boolean
+ *                                 description: Whether this is a downgrade from current plan (only when authenticated)
+ *                               priceDifference:
+ *                                 type: number
+ *                                 description: Price difference from current plan (only when authenticated)
  *       500:
  *         description: Server error
  *         content:
@@ -263,9 +289,23 @@ router.get('/history', authenticateToken, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/available-plans', async (req, res) => {
+router.get('/available-plans', optionalAuth, async (req, res) => {
   try {
-    const availablePlans = await AccountType.findAll()
+    let availablePlans
+    
+    // Check if user is authenticated
+    if (req.user && req.user.id) {
+      // User is authenticated - get plans with upgrade/downgrade flags
+      availablePlans = await SubscriptionService.getAvailableAccountTypes(req.user.id)
+    } else {
+      // User is not authenticated - get basic plans with canSelect flags
+      const allAccountTypes = await AccountType.findAll()
+      availablePlans = allAccountTypes.map(type => ({
+        ...type.toJSON(),
+        canSelect: true,
+        reason: 'no_active_subscription'
+      }))
+    }
     
     res.json({
       success: true,
@@ -273,7 +313,8 @@ router.get('/available-plans', async (req, res) => {
     })
   } catch (error) {
     logger.logError(error, {
-      operation: 'get_available_plans'
+      operation: 'get_available_plans',
+      userId: req.user?.id
     })
     
     res.status(500).json({
