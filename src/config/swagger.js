@@ -1071,6 +1071,172 @@ const options = {
               }
             }
           }
+        },
+        UserPreferences: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID unique des préférences'
+            },
+            userId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID de l\'utilisateur'
+            },
+            accountType: {
+              type: 'string',
+              description: 'Type de compte',
+              example: 'free'
+            },
+            maxForms: {
+              type: 'integer',
+              description: 'Nombre maximum de formulaires',
+              example: 5
+            },
+            maxSubmissionsPerForm: {
+              type: 'integer',
+              description: 'Nombre maximum de soumissions par formulaire',
+              example: 100
+            },
+            canExportForms: {
+              type: 'boolean',
+              description: 'Peut exporter les formulaires',
+              example: false
+            },
+            canExportSubmissions: {
+              type: 'boolean',
+              description: 'Peut exporter les soumissions',
+              example: false
+            },
+            maxExportsPerForm: {
+              type: 'integer',
+              description: 'Nombre maximum d\'exports par formulaire',
+              example: 0
+            },
+            maxExportsPerSubmission: {
+              type: 'integer',
+              description: 'Nombre maximum d\'exports par soumission',
+              example: 0
+            },
+            additionalPreferences: {
+              type: 'object',
+              description: 'Préférences supplémentaires',
+              example: {
+                theme: 'light',
+                notifications: true,
+                language: 'fr'
+              }
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de création'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de dernière mise à jour'
+            }
+          }
+        },
+        Conversation: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID unique de la conversation'
+            },
+            userId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID de l\'utilisateur'
+            },
+            formId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID du formulaire'
+            },
+            sessionId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID de la session'
+            },
+            type: {
+              type: 'string',
+              enum: ['generate', 'modify', 'analyze', 'chat'],
+              description: 'Type de conversation'
+            },
+            prompt: {
+              type: 'string',
+              description: 'Prompt de l\'utilisateur'
+            },
+            response: {
+              type: 'string',
+              description: 'Réponse de l\'IA'
+            },
+            tokensUsed: {
+              type: 'integer',
+              description: 'Nombre de tokens utilisés'
+            },
+            processingTimeMs: {
+              type: 'integer',
+              description: 'Temps de traitement en millisecondes'
+            },
+            metadata: {
+              type: 'object',
+              description: 'Métadonnées supplémentaires'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de création'
+            }
+          }
+        },
+        ConversationSession: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID unique de la session'
+            },
+            userId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID de l\'utilisateur'
+            },
+            sessionId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'Identifiant de session'
+            },
+            totalTokensUsed: {
+              type: 'integer',
+              description: 'Total de tokens utilisés dans la session'
+            },
+            totalProcessingTimeMs: {
+              type: 'integer',
+              description: 'Temps total de traitement en millisecondes'
+            },
+            conversationCount: {
+              type: 'integer',
+              description: 'Nombre de conversations dans la session'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de création'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de dernière mise à jour'
+            }
+          }
         }
       }
     },
@@ -1111,6 +1277,18 @@ const options = {
       {
         name: 'Health',
         description: 'Vérification de l\'état du serveur'
+      },
+      {
+        name: 'Preferences',
+        description: 'Gestion des préférences utilisateur'
+      },
+      {
+        name: 'Conversations',
+        description: 'Gestion des conversations IA'
+      },
+      {
+        name: 'Subscriptions',
+        description: 'Gestion des abonnements'
       }
     ]
   },

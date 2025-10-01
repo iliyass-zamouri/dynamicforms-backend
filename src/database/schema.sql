@@ -1,8 +1,9 @@
 -- Dynamic Forms Database Schema
 -- MySQL Database Schema for Dynamic Forms Application
 
-CREATE DATABASE IF NOT EXISTS dynamic_forms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE dynamic_forms;
+-- Database name will be set from environment variable in migration scripts
+-- CREATE DATABASE IF NOT EXISTS dynamic_forms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE dynamic_forms;
 
 -- Users table
 CREATE TABLE users (

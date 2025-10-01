@@ -19,6 +19,9 @@ const dbConfig = {
   multipleStatements: true,
 }
 
+// Get database name from environment
+const dbName = process.env.DB_NAME || 'dynamic_forms'
+
 async function runMigration() {
   let connection
 
@@ -31,17 +34,17 @@ async function runMigration() {
 
     // Create database first
     console.log('📄 Creating database...')
-    await connection.query('CREATE DATABASE IF NOT EXISTS dynamic_forms')
-    await connection.query('USE dynamic_forms')
-    console.log('✅ Database created successfully')
+    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`)
+    await connection.query(`USE \`${dbName}\``)
+    console.log(`✅ Database '${dbName}' created successfully`)
 
     // Read and execute schema file (skip the CREATE DATABASE and USE statements)
     const schemaPath = path.join(__dirname, 'schema.sql')
     let schema = fs.readFileSync(schemaPath, 'utf8')
 
-    // Remove CREATE DATABASE and USE statements
-    schema = schema.replace(/CREATE DATABASE IF NOT EXISTS dynamic_forms;\s*/, '')
-    schema = schema.replace(/USE dynamic_forms;\s*/, '')
+    // Remove CREATE DATABASE and USE statements (commented out in schema.sql)
+    schema = schema.replace(/-- CREATE DATABASE IF NOT EXISTS .*;\s*/, '')
+    schema = schema.replace(/-- USE .*;\s*/, '')
 
     console.log('📄 Executing schema...')
     await connection.query(schema)
