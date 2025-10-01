@@ -240,10 +240,8 @@ router.get('/history', authenticateToken, async (req, res) => {
  * @swagger
  * /api/subscriptions/available-plans:
  *   get:
- *     summary: Get available subscription plans for current user
+ *     summary: Get all available subscription plans
  *     tags: [Subscriptions]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Available plans retrieved successfully
@@ -257,26 +255,7 @@ router.get('/history', authenticateToken, async (req, res) => {
  *                     data:
  *                       type: array
  *                       items:
- *                         allOf:
- *                           - $ref: '#/components/schemas/AccountType'
- *                           - type: object
- *                             properties:
- *                               canSelect:
- *                                 type: boolean
- *                               reason:
- *                                 type: string
- *                               isUpgrade:
- *                                 type: boolean
- *                               isDowngrade:
- *                                 type: boolean
- *                               priceDifference:
- *                                 type: number
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *                         $ref: '#/components/schemas/AccountType'
  *       500:
  *         description: Server error
  *         content:
@@ -284,9 +263,9 @@ router.get('/history', authenticateToken, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/available-plans', authenticateToken, async (req, res) => {
+router.get('/available-plans', async (req, res) => {
   try {
-    const availablePlans = await SubscriptionService.getAvailableAccountTypes(req.user.id)
+    const availablePlans = await AccountType.findAll()
     
     res.json({
       success: true,
@@ -294,8 +273,7 @@ router.get('/available-plans', authenticateToken, async (req, res) => {
     })
   } catch (error) {
     logger.logError(error, {
-      operation: 'get_available_plans',
-      userId: req.user?.id
+      operation: 'get_available_plans'
     })
     
     res.status(500).json({
