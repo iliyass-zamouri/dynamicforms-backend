@@ -134,7 +134,7 @@ export class FormSubmission {
   }
 
   // Get submission statistics
-  static async getStats(formId = null) {
+  static async getStats(formId = null, userId = null) {
     let sql, params
 
     if (formId) {
@@ -148,6 +148,20 @@ export class FormSubmission {
         WHERE form_id = ?
       `
       params = [formId]
+    } else if (userId) {
+      // Get stats for all forms owned by this user
+      sql = `
+        SELECT
+          COUNT(*) as total_submissions,
+          COUNT(DISTINCT fs.user_id) as unique_users,
+          COUNT(DISTINCT fs.form_id) as total_forms,
+          DATE(MIN(fs.submitted_at)) as first_submission,
+          DATE(MAX(fs.submitted_at)) as last_submission
+        FROM form_submissions fs
+        INNER JOIN forms f ON fs.form_id = f.id
+        WHERE f.user_id = ?
+      `
+      params = [userId]
     } else {
       sql = `
         SELECT

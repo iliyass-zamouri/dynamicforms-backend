@@ -1,12 +1,20 @@
 import express from 'express'
 import { FormSubmission } from '../models/FormSubmission.js'
 import { Form } from '../models/Form.js'
+import { SubscriptionService } from '../services/subscriptionService.js'
+import { FormAnalyticsService } from '../services/formAnalyticsService.js'
 import {
   validateFormSubmission,
   validateSubmissionId,
   validatePagination,
 } from '../middleware/validation.js'
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.js'
+import { 
+  checkSubscriptionLimits, 
+  trackSubscriptionUsage, 
+  addSubscriptionContext 
+} from '../middleware/subscriptionValidation.js'
+import { sendSubmissionNotification } from '../utils/email.js'
 
 const router = express.Router()
 
@@ -83,7 +91,11 @@ const router = express.Router()
  *               $ref: '#/components/schemas/Error'
  */
 // Submit form
-router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
+router.post('/', 
+  optionalAuth, 
+  addSubscriptionContext,
+  validateFormSubmission, 
+  async (req, res) => {
   try {
     const { formId, data } = req.body
 
@@ -102,6 +114,26 @@ router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
         success: false,
         message: 'Formulaire non trouvé',
       })
+    }
+
+    // Check subscription limits for form owner (if authenticated)
+    if (req.user && req.user.id === form.userId) {
+      const limitCheck = await SubscriptionService.checkSubscriptionLimits(
+        req.user.id,
+        'create_submission',
+        form.id
+      )
+
+      if (!limitCheck.allowed) {
+        return res.status(403).json({
+          success: false,
+          message: `Limite de soumissions atteinte pour ce formulaire. Limite: ${limitCheck.limit}, Actuel: ${limitCheck.current}`,
+          data: {
+            limitCheck,
+            upgradeOptions: await SubscriptionService.getAvailableAccountTypes(req.user.id)
+          }
+        })
+      }
     }
 
     if (form.status !== 'active') {
@@ -149,6 +181,23 @@ router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
       }
     }
 
+    // Generate session ID if not provided
+    const sessionId = req.body.sessionId || FormAnalyticsService.generateSessionId()
+
+    // Start submission session tracking
+    const deviceInfo = FormAnalyticsService.parseUserAgent(req.get('User-Agent'))
+    const sessionData = {
+      formId: form.id,
+      userId: req.user?.id || null,
+      sessionId,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      referrer: req.get('Referer'),
+      ...deviceInfo
+    }
+
+    const submissionSession = await FormAnalyticsService.startSubmissionSession(sessionData)
+
     // Create submission
     const submission = await FormSubmission.create({
       formId: form.id,
@@ -165,16 +214,37 @@ router.post('/', optionalAuth, validateFormSubmission, async (req, res) => {
       })
     }
 
-    // TODO: Send email notification if configured
-    // if (form.emailNotifications && form.notificationEmail) {
-    //   await sendSubmissionNotification(form, submission);
-    // }
+    // Complete submission session tracking
+    if (submissionSession) {
+      const sessionStats = {
+        totalTimeSpentMs: req.body.sessionStats?.totalTimeSpentMs || 0,
+        totalStepsCompleted: req.body.sessionStats?.totalStepsCompleted || 0,
+        totalFieldInteractions: req.body.sessionStats?.totalFieldInteractions || 0,
+        totalValidationErrors: req.body.sessionStats?.totalValidationErrors || 0
+      }
+
+      await FormAnalyticsService.completeSubmissionSession(
+        sessionId,
+        submission.id,
+        sessionStats
+      )
+    }
+
+    // Send email notification if configured
+    try {
+      if (form.emailNotifications && form.notificationEmail) {
+        await sendSubmissionNotification(form, submission)
+      }
+    } catch (e) {
+      console.error('Submission notification failed:', e)
+    }
 
     res.status(201).json({
       success: true,
       message: 'Formulaire soumis avec succès',
       data: {
         submission: submission.toJSON(),
+        sessionId: sessionId
       },
     })
   } catch (error) {

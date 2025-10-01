@@ -34,7 +34,8 @@ const options = {
           type: 'object',
           properties: {
             id: {
-              type: 'integer',
+              type: 'string',
+              format: 'uuid',
               description: 'ID unique de l\'utilisateur'
             },
             name: {
@@ -60,6 +61,45 @@ const options = {
               type: 'string',
               format: 'date-time',
               description: 'Date de dernière mise à jour'
+            },
+            blockedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Date de blocage (null si non bloqué)'
+            },
+            emailVerifiedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Date de vérification email (null si non vérifié)'
+            },
+            passwordResetToken: {
+              type: 'string',
+              nullable: true,
+              description: 'Token de réinitialisation de mot de passe (null si aucun reset en cours)'
+            },
+            passwordResetExpiresAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Date d\'expiration du token de réinitialisation (null si aucun reset en cours)'
+            },
+            emailVerificationToken: {
+              type: 'string',
+              nullable: true,
+              description: 'Token de vérification email (null si vérifié ou aucun token)'
+            },
+            emailVerificationCode: {
+              type: 'string',
+              nullable: true,
+              description: 'Code de vérification email (6 chiffres, null si aucun code)'
+            },
+            emailVerificationCodeExpiresAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Date d\'expiration du code de vérification email (null si aucun code)'
             }
           }
         },
@@ -534,6 +574,250 @@ const options = {
             }
           }
         },
+        Subscription: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID unique de l\'abonnement',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            userId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID de l\'utilisateur',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            accountTypeId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID du type de compte',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            status: {
+              type: 'string',
+              enum: ['active', 'inactive', 'cancelled', 'expired', 'suspended', 'pending'],
+              description: 'Statut de l\'abonnement',
+              example: 'active'
+            },
+            billingCycle: {
+              type: 'string',
+              enum: ['monthly', 'yearly'],
+              description: 'Cycle de facturation',
+              example: 'monthly'
+            },
+            amount: {
+              type: 'number',
+              minimum: 0,
+              description: 'Montant de l\'abonnement',
+              example: 29.99
+            },
+            currency: {
+              type: 'string',
+              description: 'Code de la devise',
+              example: 'USD'
+            },
+            startDate: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de début de l\'abonnement'
+            },
+            endDate: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de fin de l\'abonnement'
+            },
+            nextBillingDate: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de la prochaine facturation'
+            },
+            cancelledAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Date d\'annulation'
+            },
+            paymentProvider: {
+              type: 'string',
+              nullable: true,
+              description: 'Fournisseur de paiement',
+              example: 'stripe'
+            },
+            paymentProviderSubscriptionId: {
+              type: 'string',
+              nullable: true,
+              description: 'ID de l\'abonnement chez le fournisseur de paiement'
+            },
+            paymentMethodId: {
+              type: 'string',
+              nullable: true,
+              description: 'ID de la méthode de paiement'
+            },
+            trialStartDate: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Date de début de la période d\'essai'
+            },
+            trialEndDate: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Date de fin de la période d\'essai'
+            },
+            isTrial: {
+              type: 'boolean',
+              description: 'Si c\'est un abonnement d\'essai',
+              example: false
+            },
+            autoRenew: {
+              type: 'boolean',
+              description: 'Si l\'abonnement se renouvelle automatiquement',
+              example: true
+            },
+            metadata: {
+              type: 'object',
+              description: 'Métadonnées supplémentaires',
+              example: {}
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de création'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de dernière mise à jour'
+            },
+            isActive: {
+              type: 'boolean',
+              description: 'Si l\'abonnement est actif',
+              example: true
+            },
+            isInTrial: {
+              type: 'boolean',
+              description: 'Si l\'abonnement est en période d\'essai',
+              example: false
+            },
+            isExpired: {
+              type: 'boolean',
+              description: 'Si l\'abonnement est expiré',
+              example: false
+            },
+            daysUntilExpiration: {
+              type: 'integer',
+              nullable: true,
+              description: 'Nombre de jours jusqu\'à l\'expiration',
+              example: 15
+            }
+          }
+        },
+        SubscriptionHistory: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID unique de l\'historique',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            subscriptionId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID de l\'abonnement',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            userId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID de l\'utilisateur',
+              example: '123e4567-e89b-12d3-a456-426614174000'
+            },
+            action: {
+              type: 'string',
+              enum: ['created', 'activated', 'upgraded', 'downgraded', 'cancelled', 'renewed', 'expired', 'suspended', 'reactivated', 'payment_failed', 'payment_succeeded'],
+              description: 'Action effectuée',
+              example: 'upgraded'
+            },
+            previousAccountTypeId: {
+              type: 'string',
+              format: 'uuid',
+              nullable: true,
+              description: 'ID du type de compte précédent'
+            },
+            newAccountTypeId: {
+              type: 'string',
+              format: 'uuid',
+              nullable: true,
+              description: 'ID du nouveau type de compte'
+            },
+            previousStatus: {
+              type: 'string',
+              nullable: true,
+              description: 'Statut précédent'
+            },
+            newStatus: {
+              type: 'string',
+              nullable: true,
+              description: 'Nouveau statut'
+            },
+            previousAmount: {
+              type: 'number',
+              nullable: true,
+              description: 'Montant précédent'
+            },
+            newAmount: {
+              type: 'number',
+              nullable: true,
+              description: 'Nouveau montant'
+            },
+            previousBillingCycle: {
+              type: 'string',
+              nullable: true,
+              description: 'Cycle de facturation précédent'
+            },
+            newBillingCycle: {
+              type: 'string',
+              nullable: true,
+              description: 'Nouveau cycle de facturation'
+            },
+            reason: {
+              type: 'string',
+              nullable: true,
+              description: 'Raison du changement',
+              example: 'upgrade_requested'
+            },
+            metadata: {
+              type: 'object',
+              description: 'Métadonnées supplémentaires',
+              example: {}
+            },
+            changedBy: {
+              type: 'string',
+              format: 'uuid',
+              nullable: true,
+              description: 'ID de l\'utilisateur qui a effectué le changement'
+            },
+            ipAddress: {
+              type: 'string',
+              nullable: true,
+              description: 'Adresse IP de la requête'
+            },
+            userAgent: {
+              type: 'string',
+              nullable: true,
+              description: 'User agent de la requête'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de création'
+            }
+          }
+        },
         GeminiResponse: {
           type: 'object',
           properties: {
@@ -626,6 +910,167 @@ const options = {
               example: 'gemini'
             }
           }
+        },
+        EmailVerificationRequest: {
+          type: 'object',
+          required: ['token'],
+          properties: {
+            token: {
+              type: 'string',
+              description: 'Token de vérification email',
+              example: 'abc123def456ghi789jkl012mno345pqr678stu901vwx234yz'
+            }
+          }
+        },
+        ResendVerificationRequest: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'Adresse email à vérifier',
+              example: 'user@example.com'
+            }
+          }
+        },
+        ForgotPasswordRequest: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'Adresse email pour la réinitialisation',
+              example: 'user@example.com'
+            }
+          }
+        },
+        ResetPasswordRequest: {
+          type: 'object',
+          required: ['token', 'password'],
+          properties: {
+            token: {
+              type: 'string',
+              description: 'Token de réinitialisation de mot de passe',
+              example: 'abc123def456ghi789jkl012mno345pqr678stu901vwx234yz'
+            },
+            password: {
+              type: 'string',
+              minLength: 6,
+              description: 'Nouveau mot de passe',
+              example: 'newpassword123'
+            }
+          }
+        },
+        EmailVerificationCodeRequest: {
+          type: 'object',
+          required: ['code'],
+          properties: {
+            code: {
+              type: 'string',
+              minLength: 6,
+              maxLength: 6,
+              pattern: '^[0-9]{6}$',
+              description: 'Code de vérification email (6 chiffres)',
+              example: '123456'
+            }
+          }
+        },
+        KPIs: {
+          type: 'object',
+          properties: {
+            totalForms: {
+              type: 'integer',
+              description: 'Nombre total de formulaires'
+            },
+            totalSubmissions: {
+              type: 'integer',
+              description: 'Nombre total de soumissions'
+            },
+            uniqueUsers: {
+              type: 'integer',
+              description: 'Nombre d\'utilisateurs uniques'
+            },
+            totalVisits: {
+              type: 'integer',
+              description: 'Nombre total de visites'
+            },
+            uniqueSessions: {
+              type: 'integer',
+              description: 'Nombre de sessions uniques'
+            },
+            completedSessions: {
+              type: 'integer',
+              description: 'Nombre de sessions complétées'
+            },
+            abandonedSessions: {
+              type: 'integer',
+              description: 'Nombre de sessions abandonnées'
+            },
+            conversionRate: {
+              type: 'integer',
+              description: 'Taux de conversion (pourcentage)'
+            },
+            avgSessionDurationMs: {
+              type: 'integer',
+              description: 'Durée moyenne des sessions en millisecondes'
+            },
+            generatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Date de génération des KPIs'
+            }
+          }
+        },
+        FormWithKpis: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID du formulaire'
+            },
+            title: {
+              type: 'string',
+              description: 'Titre du formulaire'
+            },
+            description: {
+              type: 'string',
+              description: 'Description du formulaire'
+            },
+            status: {
+              type: 'string',
+              enum: ['active', 'inactive', 'draft'],
+              description: 'Statut du formulaire'
+            },
+            visits: {
+              type: 'integer',
+              description: 'Nombre de visites'
+            },
+            submissions: {
+              type: 'integer',
+              description: 'Nombre de soumissions'
+            },
+            conversionRate: {
+              type: 'integer',
+              description: 'Taux de conversion (pourcentage)'
+            }
+          }
+        },
+        FormsKpisResponse: {
+          type: 'object',
+          properties: {
+            generalKpis: {
+              $ref: '#/components/schemas/KPIs'
+            },
+            forms: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/FormWithKpis'
+              }
+            }
+          }
         }
       }
     },
@@ -648,12 +1093,20 @@ const options = {
         description: 'Gestion des soumissions de formulaires'
       },
       {
-        name: 'Account Types',
-        description: 'Gestion des types de comptes et tarification'
-      },
-      {
         name: 'Gemini AI',
         description: 'Génération et modification de formulaires avec l\'IA Gemini'
+      },
+      {
+        name: 'Account Types',
+        description: 'Gestion des types de comptes et tarification (admin seulement)'
+      },
+      {
+        name: 'Users',
+        description: 'Gestion des utilisateurs et administration (admin seulement)'
+      },
+      {
+        name: 'Analytics',
+        description: 'Analytics et KPIs pour les formulaires et soumissions'
       },
       {
         name: 'Health',

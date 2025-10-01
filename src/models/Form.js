@@ -1,4 +1,6 @@
 import { executeQuery, executeQueryRaw, executeTransaction } from '../database/connection.js'
+import { FormSubmission } from './FormSubmission.js'
+import { FormAnalyticsService } from '../services/formAnalyticsService.js'
 
 export class Form {
   constructor(data) {
@@ -842,6 +844,76 @@ export class Form {
       emailNotifications: this.emailNotifications,
       marketing: this.marketing,
       successModal: this.successModal,
+    }
+  }
+
+  // Get forms with KPIs and general KPIs
+  static async getFormsWithKpis(startDate = null, endDate = null, userId = null) {
+    try {
+      // Get general KPIs first
+      const generalKpis = await FormAnalyticsService.getGeneralKpis(startDate, endDate, userId)
+      
+      // Get forms based on user role - filter by userId if not admin
+      let formsSql, formsParams
+      if (userId) {
+        formsSql = 'SELECT id, title, description, status FROM forms WHERE user_id = ? ORDER BY created_at DESC'
+        formsParams = [userId]
+      } else {
+        formsSql = 'SELECT id, title, description, status FROM forms ORDER BY created_at DESC'
+        formsParams = []
+      }
+      
+      const formsResult = await executeQuery(formsSql, formsParams)
+      
+      if (!formsResult.success) {
+        throw new Error('Failed to fetch forms')
+      }
+      
+      // Get analytics for each form
+      const formsWithAnalytics = await Promise.all(
+        formsResult.data.map(async (form) => {
+          try {
+            // Get submission stats for this form
+            const submissionStats = await FormSubmission.getStats(form.id)
+            
+            // Get visit stats for this form
+            const visitStats = await FormAnalyticsService.getFormAnalytics(form.id, startDate, endDate)
+            
+            const visits = visitStats?.visits?.total_visits || 0
+            const submissions = submissionStats.total_submissions || 0
+            const conversionRate = visits > 0 ? Math.round((submissions / visits) * 100) : 0
+            
+            return {
+              id: form.id,
+              title: form.title,
+              description: form.description,
+              status: form.status,
+              visits,
+              submissions,
+              conversionRate
+            }
+          } catch (error) {
+            console.error(`Error getting analytics for form ${form.id}:`, error)
+            return {
+              id: form.id,
+              title: form.title,
+              description: form.description,
+              status: form.status,
+              visits: 0,
+              submissions: 0,
+              conversionRate: 0
+            }
+          }
+        })
+      )
+      
+      return {
+        generalKpis,
+        forms: formsWithAnalytics
+      }
+    } catch (error) {
+      console.error('Error in getFormsWithKpis:', error)
+      throw error
     }
   }
 }

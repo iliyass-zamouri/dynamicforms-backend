@@ -16,8 +16,10 @@ export class AccountType {
     this.features = data.features
     this.priceMonthly = data.price_monthly
     this.priceYearly = data.price_yearly
+    this.priceLifetime = data.price_lifetime
     this.currency = data.currency
     this.currencySymbol = data.currency_symbol
+    this.billingModel = data.billing_model
     this.isActive = data.is_active
     this.isDefault = data.is_default
     this.createdAt = data.created_at
@@ -314,8 +316,10 @@ export class AccountType {
       features: this.features,
       priceMonthly: this.priceMonthly,
       priceYearly: this.priceYearly,
+      priceLifetime: this.priceLifetime,
       currency: this.currency,
       currencySymbol: this.currencySymbol,
+      billingModel: this.billingModel,
       isActive: this.isActive,
       isDefault: this.isDefault,
       createdAt: this.createdAt,

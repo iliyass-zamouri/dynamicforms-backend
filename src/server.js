@@ -24,6 +24,10 @@ import conversationsRoutes from './routes/conversations.js'
 import preferencesRoutes from './routes/preferences.js'
 import accountTypesRoutes from './routes/accountTypes.js'
 import paymentRoutes from './routes/payment.js'
+import adminRoutes from './routes/admin.js'
+import subscriptionsRoutes from './routes/subscriptions.js'
+import analyticsRoutes from './routes/analytics.js'
+import analyticsDataRoutes from './routes/analyticsData.js'
 
 // Import database connection
 import { testConnection } from './database/connection.js'
@@ -160,8 +164,12 @@ app.use('/api/submissions', submissionLimiter, submissionsRoutes)
 app.use('/api/gemini', apiLimiter, geminiRoutes)
 app.use('/api/conversations', apiLimiter, conversationsRoutes)
 app.use('/api/preferences', apiLimiter, preferencesRoutes)
-app.use('/api/account-types', apiLimiter, accountTypesRoutes)
 app.use('/api/payment', apiLimiter, paymentRoutes)
+app.use('/api/subscriptions', apiLimiter, subscriptionsRoutes)
+app.use('/api/analytics', apiLimiter, analyticsRoutes)
+app.use('/api/analytics', apiLimiter, analyticsDataRoutes)
+app.use('/api/admin/users', apiLimiter, adminRoutes)
+app.use('/api/admin/account-types', apiLimiter, accountTypesRoutes)
 
 // Middleware CORS spécifique pour Swagger UI
 app.use('/api-docs', (req, res, next) => {

@@ -26,7 +26,7 @@ export const validateUserRegistration = [
     .isLength({ min: 2, max: 100 })
     .withMessage('Le nom doit contenir entre 2 et 100 caractères'),
 
-  body('email').isEmail().normalizeEmail().withMessage('Veuillez fournir une adresse email valide'),
+  body('email').isEmail().withMessage('Veuillez fournir une adresse email valide'),
 
   body('password')
     .isLength({ min: 6 })
@@ -50,7 +50,7 @@ export const validateUserRegistration = [
 ]
 
 export const validateUserLogin = [
-  body('email').isEmail().normalizeEmail().withMessage('Veuillez fournir une adresse email valide'),
+  body('email').isEmail().withMessage('Veuillez fournir une adresse email valide'),
 
   body('password').notEmpty().withMessage('Le mot de passe est requis'),
 
@@ -72,7 +72,6 @@ export const validateUserUpdate = [
   body('email')
     .optional()
     .isEmail()
-    .normalizeEmail()
     .withMessage('Veuillez fournir une adresse email valide'),
 
   body('role')
@@ -133,8 +132,7 @@ export const validateFormCreation = [
         }
       }
       return true
-    })
-    .normalizeEmail(),
+    }),
 
   handleValidationErrors,
 ]
@@ -183,8 +181,7 @@ export const validateFormUpdate = [
       }
 
       return true
-    })
-    .normalizeEmail(),
+    }),
 
   handleValidationErrors,
 ]

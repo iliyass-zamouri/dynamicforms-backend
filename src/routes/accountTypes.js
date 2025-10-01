@@ -8,7 +8,7 @@ const router = express.Router()
 
 /**
  * @swagger
- * /api/account-types:
+ * /api/admin/account-types:
  *   get:
  *     summary: Get all account types
  *     tags: [Account Types]
@@ -71,7 +71,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
 /**
  * @swagger
- * /api/account-types/{id}:
+ * /api/admin/account-types/{id}:
  *   get:
  *     summary: Get account type by ID
  *     tags: [Account Types]
@@ -146,7 +146,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 /**
  * @swagger
- * /api/account-types/name/{name}:
+ * /api/admin/account-types/name/{name}:
  *   get:
  *     summary: Get account type by name
  *     tags: [Account Types]
@@ -220,7 +220,7 @@ router.get('/name/:name', authenticateToken, async (req, res) => {
 
 /**
  * @swagger
- * /api/account-types:
+ * /api/admin/account-types:
  *   post:
  *     summary: Create new account type (admin only)
  *     tags: [Account Types]
@@ -416,7 +416,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 
 /**
  * @swagger
- * /api/account-types/{id}:
+ * /api/admin/account-types/{id}:
  *   put:
  *     summary: Update account type (admin only)
  *     tags: [Account Types]
@@ -585,7 +585,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 
 /**
  * @swagger
- * /api/account-types/{id}/set-default:
+ * /api/admin/account-types/{id}/set-default:
  *   post:
  *     summary: Set account type as default (admin only)
  *     tags: [Account Types]
@@ -679,7 +679,7 @@ router.post('/:id/set-default', authenticateToken, requireAdmin, async (req, res
 
 /**
  * @swagger
- * /api/account-types/{id}:
+ * /api/admin/account-types/{id}:
  *   delete:
  *     summary: Delete account type (admin only)
  *     tags: [Account Types]

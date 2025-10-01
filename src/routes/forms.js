@@ -10,9 +10,15 @@ import {
   validateSuccessModal,
 } from '../middleware/validation.js'
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.js'
+import { 
+  checkSubscriptionLimits, 
+  trackSubscriptionUsage, 
+  addSubscriptionContext 
+} from '../middleware/subscriptionValidation.js'
 import { sendErrorResponse } from '../utils/errorResponse.js'
 import logger from '../utils/logger.js'
 import { v4 as uuidv4 } from 'uuid'
+import { sendAdminNewFormNotification } from '../utils/email.js'
 
 const router = express.Router()
 
@@ -198,6 +204,7 @@ router.get('/', authenticateToken, validatePagination, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+
 // Get form by ID
 router.get('/:id', authenticateToken, validateFormId, async (req, res) => {
   try {
@@ -397,22 +404,14 @@ router.get('/slug/:slug', optionalAuth, async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // Create new form
-router.post('/', authenticateToken, validateFormCreation, async (req, res) => {
+router.post('/', 
+  authenticateToken, 
+  addSubscriptionContext,
+  checkSubscriptionLimits('create_form'),
+  validateFormCreation, 
+  trackSubscriptionUsage('create_form'),
+  async (req, res) => {
   try {
-    // Check if user can create more forms
-    const canCreateForm = await req.user.canCreateForm()
-    
-    if (!canCreateForm) {
-      const preferences = await req.user.getPreferences()
-      return res.status(403).json({
-        success: false,
-        message: `Limite de formulaires atteinte. Votre plan ${preferences.accountType} permet ${preferences.maxForms} formulaires maximum.`,
-        data: {
-          limit: preferences.maxForms,
-          accountType: preferences.accountType
-        }
-      })
-    }
 
     // Handle slug availability checking
     let finalSlug
@@ -443,6 +442,13 @@ router.post('/', authenticateToken, validateFormCreation, async (req, res) => {
         success: false,
         message: 'Échec de la création du formulaire',
       })
+    }
+
+    // Notify admin about new form creation (best-effort)
+    try {
+      await sendAdminNewFormNotification(form, req.user)
+    } catch (e) {
+      console.error('Admin new form notification failed:', e)
     }
 
     res.status(201).json({

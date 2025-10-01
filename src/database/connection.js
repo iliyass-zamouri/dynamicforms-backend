@@ -57,17 +57,29 @@ export async function testConnection() {
 export async function executeQuery(sql, params = []) {
   const startTime = Date.now()
   const table = extractTableFromQuery(sql)
+  const operation = sql.trim().toUpperCase().split(' ')[0]
   
   try {
-    logger.logDatabaseTrace('SELECT', table, sql, params)
-    const [rows] = await pool.query(sql, params)
+    logger.logDatabaseTrace(operation, table, sql, params)
+    const [rows, fields] = await pool.query(sql, params)
     const duration = Date.now() - startTime
     
-    logger.logDatabaseTrace('SELECT', table, sql, params, duration)
+    logger.logDatabaseTrace(operation, table, sql, params, duration)
+    
+    // Handle different query types
+    let rowsAffected = 0
+    if (operation === 'SELECT') {
+      rowsAffected = rows.length
+    } else if (operation === 'INSERT') {
+      rowsAffected = rows.affectedRows || 0
+    } else if (operation === 'UPDATE' || operation === 'DELETE') {
+      rowsAffected = rows.affectedRows || 0
+    }
+    
     logger.logPerformance('database_query', duration, { 
       table, 
-      operation: 'SELECT',
-      rowsAffected: rows.length 
+      operation,
+      rowsAffected
     })
     
     return { success: true, data: rows }
@@ -90,16 +102,27 @@ export async function executeQuery(sql, params = []) {
 export async function executeQueryRaw(sql, params = []) {
   const startTime = Date.now()
   const table = extractTableFromQuery(sql)
+  const operation = sql.trim().toUpperCase().split(' ')[0]
   
   try {
     logger.logDatabaseTrace('RAW_QUERY', table, sql, params)
-    const [rows] = await pool.query(sql, params)
+    const [rows, fields] = await pool.query(sql, params)
     const duration = Date.now() - startTime
+    
+    // Handle different query types
+    let rowsAffected = 0
+    if (operation === 'SELECT') {
+      rowsAffected = rows.length
+    } else if (operation === 'INSERT') {
+      rowsAffected = rows.affectedRows || 0
+    } else if (operation === 'UPDATE' || operation === 'DELETE') {
+      rowsAffected = rows.affectedRows || 0
+    }
     
     logger.logPerformance('database_raw_query', duration, { 
       table, 
       operation: 'RAW_QUERY',
-      rowsAffected: rows.length 
+      rowsAffected
     })
     
     return { success: true, data: rows }
