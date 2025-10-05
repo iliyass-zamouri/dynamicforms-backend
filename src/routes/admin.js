@@ -609,7 +609,7 @@ router.post('/:id/block', authenticateToken, requireAdmin, async (req, res) => {
       })
     }
 
-    logger.logInfo('User blocked', {
+    logger.info('User blocked', {
       userId: user.id,
       email: user.email,
       blockedBy: req.user.id,
@@ -695,7 +695,7 @@ router.post('/:id/unblock', authenticateToken, requireAdmin, async (req, res) =>
       })
     }
 
-    logger.logInfo('User unblocked', {
+    logger.info('User unblocked', {
       userId: user.id,
       email: user.email,
       unblockedBy: req.user.id,
@@ -781,7 +781,7 @@ router.post('/:id/verify-email', authenticateToken, requireAdmin, async (req, re
       })
     }
 
-    logger.logInfo('Email verified', {
+    logger.info('Email verified', {
       userId: user.id,
       email: user.email,
       verifiedBy: req.user.id,
@@ -898,7 +898,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
       })
     }
 
-    logger.logInfo('User updated', {
+    logger.info('User updated', {
       userId: user.id,
       email: user.email,
       updatedBy: req.user.id,
@@ -978,7 +978,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
       })
     }
 
-    logger.logInfo('User deleted', {
+    logger.info('User deleted', {
       userId: user.id,
       email: user.email,
       deletedBy: req.user.id,
