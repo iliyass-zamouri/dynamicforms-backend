@@ -73,7 +73,7 @@ export class FormSubmission {
     return []
   }
 
-  // Get submissions for a user
+  // Get submissions for forms owned by a user
   static async findByUserId(userId, limit = 50, offset = 0) {
     // Ensure limit and offset are integers
     const limitNum = parseInt(limit) || 50
@@ -83,7 +83,7 @@ export class FormSubmission {
       SELECT fs.*, f.title as form_title, f.slug as form_slug
       FROM form_submissions fs
       JOIN forms f ON fs.form_id = f.id
-      WHERE fs.user_id = ?
+      WHERE f.user_id = ?
       ORDER BY fs.submitted_at DESC
       LIMIT ${limitNum} OFFSET ${offsetNum}
     `

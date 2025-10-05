@@ -749,7 +749,7 @@ export class FormSubmissionSession {
   async complete(submissionId = null) {
     return await this.update({
       submissionId,
-      sessionCompletedAt: new Date().toISOString(),
+      sessionCompletedAt: new Date(),
       submissionCompleted: true
     })
   }
@@ -757,7 +757,7 @@ export class FormSubmissionSession {
   // Abandon session at specific step
   async abandon(stepNumber) {
     return await this.update({
-      sessionCompletedAt: new Date().toISOString(),
+      sessionCompletedAt: new Date(),
       submissionCompleted: false,
       abandonedAtStep: stepNumber
     })

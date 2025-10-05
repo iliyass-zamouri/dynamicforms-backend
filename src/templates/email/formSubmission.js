@@ -17,6 +17,11 @@ export const formSubmissionTemplate = (form, submission, submissionUrl = null) =
 
   // Format submission data for display
   const formatSubmissionData = (data) => {
+    // Handle null/undefined data
+    if (!data || typeof data !== 'object') {
+      return '<p style="color: #6b7280; font-style: italic;">Aucune donnée disponible</p>'
+    }
+
     let html = '<table style="width: 100%; border-collapse: collapse;">'
 
     for (const [key, value] of Object.entries(data)) {
