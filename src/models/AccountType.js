@@ -14,6 +14,7 @@ export class AccountType {
     this.maxExportsPerForm = data.max_exports_per_form
     this.maxExportsPerSubmission = data.max_exports_per_submission
     this.features = data.features
+    this.stripe = data.stripe_config
     this.priceMonthly = data.price_monthly
     this.priceYearly = data.price_yearly
     this.priceLifetime = data.price_lifetime
@@ -39,8 +40,8 @@ export class AccountType {
         INSERT INTO account_types (
           id, name, display_name, description, max_forms, max_submissions_per_form,
           can_export_forms, can_export_submissions, max_exports_per_form, max_exports_per_submission,
-          features, price_monthly, price_yearly, currency, currency_symbol, is_active, is_default
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          features, stripe_config, price_monthly, price_yearly, currency, currency_symbol, is_active, is_default
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
 
       const result = await executeQuery(sql, [
@@ -55,6 +56,7 @@ export class AccountType {
         accountTypeData.maxExportsPerForm,
         accountTypeData.maxExportsPerSubmission,
         JSON.stringify(accountTypeData.features || {}),
+        JSON.stringify(accountTypeData.stripe || {}),
         accountTypeData.priceMonthly,
         accountTypeData.priceYearly,
         accountTypeData.currency,
@@ -104,12 +106,19 @@ export class AccountType {
     if (result.success && result.data.length > 0) {
       const accountType = new AccountType(result.data[0])
       
-      // Parse features JSON
+      // Parse JSON fields
       if (accountType.features && typeof accountType.features === 'string') {
         try {
           accountType.features = JSON.parse(accountType.features)
         } catch (error) {
           accountType.features = {}
+        }
+      }
+      if (accountType.stripe && typeof accountType.stripe === 'string') {
+        try {
+          accountType.stripe = JSON.parse(accountType.stripe)
+        } catch (error) {
+          accountType.stripe = {}
         }
       }
       
@@ -154,12 +163,19 @@ export class AccountType {
       return result.data.map((accountType) => {
         const type = new AccountType(accountType)
         
-        // Parse features JSON
+        // Parse JSON fields
         if (type.features && typeof type.features === 'string') {
           try {
             type.features = JSON.parse(type.features)
           } catch (error) {
             type.features = {}
+          }
+        }
+        if (type.stripe && typeof type.stripe === 'string') {
+          try {
+            type.stripe = JSON.parse(type.stripe)
+          } catch (error) {
+            type.stripe = {}
           }
         }
         
@@ -205,6 +221,7 @@ export class AccountType {
       'maxExportsPerForm',
       'maxExportsPerSubmission',
       'features',
+      'stripe',
       'priceMonthly',
       'priceYearly',
       'currency',
@@ -225,6 +242,7 @@ export class AccountType {
                        key === 'canExportSubmissions' ? 'can_export_submissions' :
                        key === 'maxExportsPerForm' ? 'max_exports_per_form' :
                        key === 'maxExportsPerSubmission' ? 'max_exports_per_submission' :
+                       key === 'stripe' ? 'stripe_config' :
                        key === 'priceMonthly' ? 'price_monthly' :
                        key === 'priceYearly' ? 'price_yearly' :
                        key === 'currencySymbol' ? 'currency_symbol' :
@@ -234,7 +252,7 @@ export class AccountType {
         updates.push(`${dbField} = ?`)
         
         // Handle JSON fields
-        if (key === 'features') {
+        if (key === 'features' || key === 'stripe') {
           values.push(JSON.stringify(value))
         } else {
           values.push(value)
@@ -314,6 +332,7 @@ export class AccountType {
       maxExportsPerForm: this.maxExportsPerForm,
       maxExportsPerSubmission: this.maxExportsPerSubmission,
       features: this.features,
+      stripe: this.stripe,
       priceMonthly: this.priceMonthly,
       priceYearly: this.priceYearly,
       priceLifetime: this.priceLifetime,

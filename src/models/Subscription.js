@@ -206,6 +206,81 @@ export class Subscription {
     return null
   }
 
+  // Find subscription by Stripe subscription ID
+  static async findByStripeSubscriptionId(stripeSubscriptionId) {
+    const sql = 'SELECT * FROM subscriptions WHERE payment_provider_subscription_id = ?'
+    const result = await executeQuery(sql, [stripeSubscriptionId])
+
+    if (result.success && result.data.length > 0) {
+      const subscription = new Subscription(result.data[0])
+      
+      // Parse metadata JSON
+      if (subscription.metadata && typeof subscription.metadata === 'string') {
+        try {
+          subscription.metadata = JSON.parse(subscription.metadata)
+        } catch (error) {
+          subscription.metadata = {}
+        }
+      }
+      
+      return subscription
+    }
+
+    return null
+  }
+
+  // Find all subscriptions (use with caution - can be expensive)
+  static async findAll(limit = 100) {
+    const sql = 'SELECT * FROM subscriptions ORDER BY created_at DESC LIMIT ?'
+    const result = await executeQuery(sql, [limit])
+
+    if (result.success && result.data.length > 0) {
+      return result.data.map(row => {
+        const subscription = new Subscription(row)
+        
+        // Parse metadata JSON
+        if (subscription.metadata && typeof subscription.metadata === 'string') {
+          try {
+            subscription.metadata = JSON.parse(subscription.metadata)
+          } catch (error) {
+            subscription.metadata = {}
+          }
+        }
+        
+        return subscription
+      })
+    }
+
+    return []
+  }
+
+  // Update Stripe subscription information
+  async updateStripeInfo(stripeSubscriptionId, stripeCustomerId) {
+    const sql = `
+      UPDATE subscriptions 
+      SET payment_provider = 'stripe',
+          payment_provider_subscription_id = ?,
+          payment_provider_customer_id = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `
+    
+    const result = await executeQuery(sql, [stripeSubscriptionId, stripeCustomerId, this.id])
+    
+    if (result.success) {
+      this.paymentProvider = 'stripe'
+      this.paymentProviderSubscriptionId = stripeSubscriptionId
+      this.paymentProviderCustomerId = stripeCustomerId
+      logger.info('Subscription Stripe info updated', {
+        subscriptionId: this.id,
+        stripeSubscriptionId,
+        stripeCustomerId
+      })
+    }
+    
+    return result
+  }
+
   // Find all subscriptions by user ID
   static async findByUserId(userId, includeInactive = false) {
     const sql = includeInactive 
@@ -237,7 +312,7 @@ export class Subscription {
   // Update subscription
   async update(updateData) {
     const allowedFields = [
-      'status', 'billingCycle', 'amount', 'currency', 'endDate', 'nextBillingDate',
+      'accountTypeId', 'status', 'billingCycle', 'amount', 'currency', 'endDate', 'nextBillingDate',
       'cancelledAt', 'paymentProvider', 'paymentProviderSubscriptionId', 
       'paymentMethodId', 'trialStartDate', 'trialEndDate', 'isTrial', 
       'autoRenew', 'metadata'
@@ -315,7 +390,7 @@ export class Subscription {
     return success
   }
 
-  // Upgrade subscription to new account type
+  // Upgrade request: defer actual plan switch until payment confirmation
   async upgrade(newAccountTypeId, reason = 'upgrade_requested', changedBy = null) {
     const startTime = Date.now()
     
@@ -332,34 +407,32 @@ export class Subscription {
 
       const previousAccountTypeId = this.accountTypeId
       const previousAmount = this.amount
-      const newAmount = this.billingCycle === 'yearly' 
-        ? newAccountType.priceYearly 
-        : newAccountType.priceMonthly
 
-      // Update subscription
-      const updateData = {
-        accountTypeId: newAccountTypeId,
-        amount: newAmount
+      // Defer actual switch until payment succeeded via webhook
+      const pendingChange = {
+        type: 'upgrade',
+        targetAccountTypeId: newAccountTypeId,
+        requestedAt: new Date().toISOString()
       }
 
-      const success = await this.update(updateData)
+      const success = await this.update({
+        status: 'pending',
+        metadata: { ...(this.metadata || {}), pendingPlanChange: pendingChange }
+      })
       
       if (success) {
-        // Record in history
+        // Record request in history (no plan switch yet)
         await SubscriptionHistory.recordChange({
           subscriptionId: this.id,
           userId: this.userId,
-          action: 'upgraded',
+          action: 'upgrade_requested',
           previousAccountTypeId: previousAccountTypeId,
           newAccountTypeId: newAccountTypeId,
           previousAmount: previousAmount,
-          newAmount: newAmount,
+          newAmount: null,
           reason: reason,
           changedBy: changedBy
         })
-
-        // Update user preferences
-        await this.updateUserPreferencesToAccountType(newAccountTypeId)
 
         const duration = Date.now() - startTime
         
@@ -388,7 +461,7 @@ export class Subscription {
     }
   }
 
-  // Downgrade subscription to new account type
+  // Downgrade request: defer actual plan switch until confirmation
   async downgrade(newAccountTypeId, reason = 'downgrade_requested', changedBy = null) {
     const startTime = Date.now()
     
@@ -405,34 +478,31 @@ export class Subscription {
 
       const previousAccountTypeId = this.accountTypeId
       const previousAmount = this.amount
-      const newAmount = this.billingCycle === 'yearly' 
-        ? newAccountType.priceYearly 
-        : newAccountType.priceMonthly
 
-      // Update subscription
-      const updateData = {
-        accountTypeId: newAccountTypeId,
-        amount: newAmount
+      const pendingChange = {
+        type: 'downgrade',
+        targetAccountTypeId: newAccountTypeId,
+        requestedAt: new Date().toISOString()
       }
 
-      const success = await this.update(updateData)
+      const success = await this.update({
+        status: 'pending',
+        metadata: { ...(this.metadata || {}), pendingPlanChange: pendingChange }
+      })
       
       if (success) {
-        // Record in history
+        // Record request in history (no plan switch yet)
         await SubscriptionHistory.recordChange({
           subscriptionId: this.id,
           userId: this.userId,
-          action: 'downgraded',
+          action: 'downgrade_requested',
           previousAccountTypeId: previousAccountTypeId,
           newAccountTypeId: newAccountTypeId,
           previousAmount: previousAmount,
-          newAmount: newAmount,
+          newAmount: null,
           reason: reason,
           changedBy: changedBy
         })
-
-        // Update user preferences
-        await this.updateUserPreferencesToAccountType(newAccountTypeId)
 
         const duration = Date.now() - startTime
         

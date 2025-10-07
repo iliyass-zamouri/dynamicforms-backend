@@ -110,6 +110,9 @@ app.options('*', (req, res) => {
 // Rate limiting
 app.use(generalLimiter)
 
+// Stripe webhook - raw body parser MUST be before express.json()
+app.use('/api/payment/webhook/stripe', express.raw({ type: 'application/json' }))
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))

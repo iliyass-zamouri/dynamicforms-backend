@@ -348,6 +348,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       maxExportsPerForm = 0,
       maxExportsPerSubmission = 0,
       features = {},
+      stripe,
       priceMonthly = 0,
       priceYearly = 0,
       currency = 'USD',
@@ -375,6 +376,9 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       }
     }
 
+    // Merge top-level stripe config into features.stripe if provided
+    const mergedFeatures = features || {}
+
     const accountType = await AccountType.create({
       name,
       displayName,
@@ -385,7 +389,8 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       canExportSubmissions,
       maxExportsPerForm,
       maxExportsPerSubmission,
-      features,
+      features: mergedFeatures,
+      stripe,
       priceMonthly,
       priceYearly,
       currency,
@@ -558,7 +563,16 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
       }
     }
 
-    const success = await accountType.update(req.body)
+    // If a top-level stripe object is sent, merge it into features JSON
+    const body = { ...req.body }
+    if (body.stripe) {
+      const currentFeatures = (accountType.features && typeof accountType.features === 'object')
+        ? accountType.features
+        : {}
+      // keep features as-is; pass stripe separately
+    }
+
+    const success = await accountType.update(body)
 
     if (!success) {
       return res.status(500).json({

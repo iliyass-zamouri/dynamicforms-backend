@@ -23,6 +23,7 @@ import submissionsRoutes from './routes/submissions.js'
 import geminiRoutes from './routes/gemini.js'
 import conversationsRoutes from './routes/conversations.js'
 import preferencesRoutes from './routes/preferences.js'
+import paymentRoutes from './routes/payment.js'
 
 // Import database connection (for health checks or readiness if needed)
 import { testConnection } from './database/connection.js'
@@ -196,6 +197,7 @@ app.use('/api/submissions', submissionLimiter, submissionsRoutes)
 app.use('/api/gemini', apiLimiter, geminiRoutes)
 app.use('/api/conversations', apiLimiter, conversationsRoutes)
 app.use('/api/preferences', apiLimiter, preferencesRoutes)
+app.use('/api/payment', paymentRoutes)
 
 // Middleware CORS spécifique pour Swagger UI
 app.use('/api-docs', (req, res, next) => {

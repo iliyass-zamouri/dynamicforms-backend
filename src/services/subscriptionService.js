@@ -212,14 +212,19 @@ export class SubscriptionService {
 
   // Get user's current subscription with account type details
   static async getUserSubscription(userId) {
-    const subscription = await Subscription.findActiveByUserId(userId)
-    
+    // Prefer active subscription
+    let subscription = await Subscription.findActiveByUserId(userId)
+
+    // Fall back to latest pending subscription (e.g., upgrade requested but unpaid)
+    if (!subscription) {
+      subscription = await Subscription.findPendingByUserId(userId)
+    }
+
     if (!subscription) {
       return null
     }
 
     const accountType = await subscription.getAccountType()
-    
     return {
       subscription: subscription.toJSON(),
       accountType: accountType ? accountType.toJSON() : null
@@ -554,6 +559,14 @@ export class SubscriptionService {
         nextBillingDate = endDate
       }
 
+      // Apply any pending plan change on activation
+      const metadata = subscription.metadata || {}
+      if (metadata.pendingPlanChange?.targetAccountTypeId) {
+        subscription.accountTypeId = metadata.pendingPlanChange.targetAccountTypeId
+        // Clear pending flag
+        metadata.pendingPlanChange = null
+      }
+
       // Update subscription to active
       await subscription.update({
         status: 'active',
@@ -561,7 +574,9 @@ export class SubscriptionService {
         nextBillingDate,
         paymentProvider: activationData.paymentProvider || activationData.provider || subscription.paymentProvider || null,
         paymentProviderSubscriptionId: activationData.paymentProviderSubscriptionId || activationData.providerSubscriptionId || subscription.paymentProviderSubscriptionId || null,
-        paymentMethodId: activationData.paymentMethodId || subscription.paymentMethodId || null
+        paymentMethodId: activationData.paymentMethodId || subscription.paymentMethodId || null,
+        accountTypeId: subscription.accountTypeId,
+        metadata
       })
 
       // Record in history

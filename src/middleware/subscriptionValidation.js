@@ -38,26 +38,37 @@ export const checkSubscriptionLimits = (action, resourceIdParam = null) => {
       if (!limitCheck.allowed) {
         const subscriptionData = await SubscriptionService.getUserSubscription(userId)
         const availablePlans = await SubscriptionService.getAvailableAccountTypes(userId)
-        
         const upgradePlans = availablePlans.filter(plan => plan.canSelect && plan.isUpgrade)
-        
+
+        const responseData = {
+          limitCheck,
+          upgradeOptions: upgradePlans.map(plan => ({
+            id: plan.id,
+            name: plan.name,
+            displayName: plan.displayName,
+            priceMonthly: plan.priceMonthly,
+            priceYearly: plan.priceYearly,
+            currency: plan.currency,
+            currencySymbol: plan.currencySymbol,
+            priceDifference: plan.priceDifference,
+            stripe: plan.stripe || null,
+            stripePriceMonthly: (plan.stripe && plan.stripe.priceMonthly) || plan.stripePriceMonthly || null,
+            stripePriceYearly: (plan.stripe && plan.stripe.priceYearly) || plan.stripePriceYearly || null
+          }))
+        }
+
+        if (subscriptionData) {
+          responseData.subscription = subscriptionData.subscription
+          responseData.accountType = subscriptionData.accountType
+        } else {
+          responseData.subscription = null
+          responseData.accountType = null
+        }
+
         return res.status(403).json({
           success: false,
           message: getLimitExceededMessage(action, limitCheck),
-          data: {
-            limitCheck,
-            subscription: subscriptionData,
-            upgradeOptions: upgradePlans.map(plan => ({
-              id: plan.id,
-              name: plan.name,
-              displayName: plan.displayName,
-              priceMonthly: plan.priceMonthly,
-              priceYearly: plan.priceYearly,
-              currency: plan.currency,
-              currencySymbol: plan.currencySymbol,
-              priceDifference: plan.priceDifference
-            }))
-          }
+          data: responseData
         })
       }
 

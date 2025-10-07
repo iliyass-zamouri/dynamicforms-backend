@@ -306,6 +306,16 @@ router.get('/available-plans', optionalAuth, async (req, res) => {
         reason: 'no_active_subscription'
       }))
     }
+
+    // Expose Stripe price IDs from dedicated stripe config
+    availablePlans = availablePlans.map(plan => {
+      const stripeMeta = plan.stripe || {}
+      return {
+        ...plan,
+        stripePriceMonthly: stripeMeta.priceMonthly || plan.stripePriceMonthly || null,
+        stripePriceYearly: stripeMeta.priceYearly || plan.stripePriceYearly || null
+      }
+    })
     
     res.json({
       success: true,
@@ -351,13 +361,20 @@ router.get('/available-plans', optionalAuth, async (req, res) => {
  *                 description: Billing cycle for the subscription
  *               paymentProvider:
  *                 type: string
- *                 description: Payment provider (for future integration)
- *               paymentProviderSubscriptionId:
+ *                 default: stripe
+ *                 description: Payment provider (currently only 'stripe' is supported)
+ *               priceId:
  *                 type: string
- *                 description: External payment provider subscription ID
- *               paymentMethodId:
+ *                 description: Stripe Price ID (required for paid plans)
+ *               successUrl:
  *                 type: string
- *                 description: Payment method ID
+ *                 description: URL to redirect after successful payment (required for paid plans)
+ *               cancelUrl:
+ *                 type: string
+ *                 description: URL to redirect if payment is cancelled (required for paid plans)
+ *               customerId:
+ *                 type: string
+ *                 description: Existing Stripe customer ID (optional)
  *               isTrial:
  *                 type: boolean
  *                 default: false
@@ -379,9 +396,22 @@ router.get('/available-plans', optionalAuth, async (req, res) => {
  *                 - type: object
  *                   properties:
  *                     data:
- *                       $ref: '#/components/schemas/Subscription'
+ *                       type: object
+ *                       properties:
+ *                         subscription:
+ *                           $ref: '#/components/schemas/Subscription'
+ *                         checkoutSession:
+ *                           type: object
+ *                           description: Stripe checkout session (for paid plans only)
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             url:
+ *                               type: string
+ *                             provider:
+ *                               type: string
  *       400:
- *         description: Bad request
+ *         description: Bad request - missing required parameters
  *         content:
  *           application/json:
  *             schema:
@@ -410,9 +440,11 @@ router.post('/create', authenticateToken, async (req, res) => {
     const {
       accountTypeId,
       billingCycle,
-      paymentProvider,
-      paymentProviderSubscriptionId,
-      paymentMethodId,
+      paymentProvider = 'stripe',
+      priceId,
+      successUrl,
+      cancelUrl,
+      customerId,
       isTrial = false,
       trialDays,
       metadata = {}
@@ -432,14 +464,6 @@ router.post('/create', authenticateToken, async (req, res) => {
       })
     }
 
-    // Calculate trial dates if trial is requested
-    let trialStartDate = null
-    let trialEndDate = null
-    if (isTrial && trialDays) {
-      trialStartDate = new Date()
-      trialEndDate = new Date(trialStartDate.getTime() + trialDays * 24 * 60 * 60 * 1000)
-    }
-
     const accountType = await AccountType.findById(accountTypeId)
     if (!accountType) {
       return res.status(400).json({ success: false, message: 'Account type not found' })
@@ -449,16 +473,32 @@ router.post('/create', authenticateToken, async (req, res) => {
     const isFree = (accountType.priceMonthly === 0 && accountType.priceYearly === 0) || accountType.name === 'free'
     const isLifetime = accountType.billingModel === 'lifetime'
 
+    // For paid plans, validate payment parameters
+    if (!isFree) {
+      if (paymentProvider === 'stripe' && (!priceId || !successUrl || !cancelUrl)) {
+        return res.status(400).json({
+          success: false,
+          message: 'For Stripe payments: priceId, successUrl, and cancelUrl are required'
+        })
+      }
+    }
+
+    // Calculate trial dates if trial is requested
+    let trialStartDate = null
+    let trialEndDate = null
+    if (isTrial && trialDays) {
+      trialStartDate = new Date()
+      trialEndDate = new Date(trialStartDate.getTime() + trialDays * 24 * 60 * 60 * 1000)
+    }
+
     const subscription = await SubscriptionService.createSubscription(
       req.user.id,
       accountTypeId,
       billingCycle,
       {
-        status: isFree ? 'active' : undefined,
-        autoRenew: isFree ? false : undefined,
+        status: isFree ? 'active' : 'pending',
+        autoRenew: isFree ? false : true,
         paymentProvider: isFree ? null : paymentProvider,
-        paymentProviderSubscriptionId: isFree ? null : paymentProviderSubscriptionId,
-        paymentMethodId: isFree ? null : paymentMethodId,
         isTrial: isFree ? false : isTrial,
         trialStartDate: isFree ? null : trialStartDate,
         trialEndDate: isFree ? null : trialEndDate,
@@ -474,10 +514,21 @@ router.post('/create', authenticateToken, async (req, res) => {
       return res.status(201).json({ success: true, data: subscription.toJSON() })
     }
 
-    // For paid plans (recurring or lifetime), return checkout session
+    // For paid plans (recurring or lifetime), create checkout session
     const session = await PaymentService.createCheckoutSession(subscription, req.user, {
       provider: paymentProvider,
+      priceId,
+      successUrl,
+      cancelUrl,
+      customerId,
       planType: isLifetime ? 'lifetime' : 'recurring'
+    })
+
+    logger.info('Checkout session created', {
+      subscriptionId: subscription.id,
+      userId: req.user.id,
+      checkoutSessionId: session.id,
+      priceId
     })
 
     res.status(201).json({
@@ -509,6 +560,13 @@ router.post('/create', authenticateToken, async (req, res) => {
     }
 
     if (error.message === 'Account type not found') {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      })
+    }
+
+    if (error.message.includes('required')) {
       return res.status(400).json({
         success: false,
         message: error.message
@@ -773,6 +831,48 @@ router.put('/:subscriptionId/cancel', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to cancel subscription'
     })
+  }
+})
+
+/**
+ * Start checkout for a pending plan change or new paid subscription
+ * Body expects: { paymentProvider: 'stripe', priceId, successUrl, cancelUrl, customerId? }
+ */
+router.post('/:subscriptionId/checkout', authenticateToken, async (req, res) => {
+  try {
+    const { subscriptionId } = req.params
+    const { paymentProvider = 'stripe', priceId, successUrl, cancelUrl, customerId } = req.body
+
+    const subscription = await Subscription.findById(subscriptionId)
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: 'Subscription not found' })
+    }
+
+    if (subscription.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' })
+    }
+
+    if (paymentProvider !== 'stripe') {
+      return res.status(400).json({ success: false, message: 'Only Stripe is supported for checkout' })
+    }
+
+    if (!priceId || !successUrl || !cancelUrl) {
+      return res.status(400).json({ success: false, message: 'priceId, successUrl and cancelUrl are required' })
+    }
+
+    const session = await PaymentService.createCheckoutSession(subscription, req.user, {
+      provider: 'stripe',
+      priceId,
+      successUrl,
+      cancelUrl,
+      customerId,
+      planType: subscription.planType || 'recurring'
+    })
+
+    res.json({ success: true, data: { checkoutSession: session } })
+  } catch (error) {
+    logger.logError(error, { operation: 'start_subscription_checkout', userId: req.user?.id, params: req.params, body: req.body })
+    res.status(500).json({ success: false, message: 'Failed to start checkout' })
   }
 })
 
