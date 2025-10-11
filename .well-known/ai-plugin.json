@@ -11,11 +11,11 @@
   },
   "api": {
     "type": "openapi",
-    "url": "https://yourdomain.com/openapi.json",
+    "url": "https://api.dynamicforms.fr/openapi.json",
     "is_user_authenticated": false
   },
-  "logo_url": "https://yourdomain.com/logo.png",
+  "logo_url": "https://dynamicforms.fr/logo.png",
   "contact_email": "support@dynamicforms.com",
-  "legal_info_url": "https://yourdomain.com/legal"
+  "legal_info_url": "https://dynamicforms.fr/terms"
 }
 

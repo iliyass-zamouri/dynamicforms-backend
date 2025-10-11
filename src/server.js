@@ -152,6 +152,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // Static files (for file uploads)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
+// Static file for AI plugin manifest (must be accessible publicly)
+app.use('/.well-known', express.static(path.join(__dirname, '../.well-known')))
+
 // AI Plugin discovery routes (must be before rate limiting for public access)
 app.use(aiPluginRoutes)
 
