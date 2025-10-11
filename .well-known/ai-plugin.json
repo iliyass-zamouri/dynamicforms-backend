@@ -1,0 +1,21 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Dynamic Forms API",
+  "name_for_model": "dynamic_forms",
+  "description_for_human": "Create, manage, and analyze dynamic forms with AI-powered generation using Gemini AI. Handle form submissions, analytics, and user management.",
+  "description_for_model": "Dynamic Forms API enables you to create and manage dynamic multi-step forms with AI assistance. You can generate forms from natural language descriptions, modify existing forms, analyze form performance, manage submissions, track analytics, and handle user subscriptions. The API supports form creation with various field types (text, email, number, textarea, select, radio, checkbox, date, file), multi-step workflows, authentication, payment processing via Stripe, and comprehensive analytics tracking.",
+  "auth": {
+    "type": "user_http",
+    "authorization_type": "bearer",
+    "authorization_content_type": "application/json"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://yourdomain.com/openapi.json",
+    "is_user_authenticated": false
+  },
+  "logo_url": "https://yourdomain.com/logo.png",
+  "contact_email": "support@dynamicforms.com",
+  "legal_info_url": "https://yourdomain.com/legal"
+}
+

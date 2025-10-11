@@ -9,7 +9,7 @@ const options = {
     info: {
       title: 'Dynamic Forms API',
       version: '1.0.0',
-      description: 'API pour la gestion de formulaires dynamiques avec authentification et soumissions',
+      description: 'API pour la gestion de formulaires dynamiques avec authentification et soumissions. This API enables AI assistants to create, manage, and analyze dynamic forms with AI-powered generation using Gemini AI. Supports form creation, submission handling, analytics tracking, user authentication, and subscription management.',
       contact: {
         name: 'Dynamic Forms Team',
         email: 'support@dynamicforms.com'
@@ -17,9 +17,23 @@ const options = {
       license: {
         name: 'MIT',
         url: 'https://opensource.org/licenses/MIT'
+      },
+      'x-logo': {
+        url: '/logo.png',
+        altText: 'Dynamic Forms API'
       }
     },
     servers: envConfig.swagger.servers,
+    'x-ai-plugin': {
+      name_for_human: 'Dynamic Forms API',
+      name_for_model: 'dynamic_forms',
+      description_for_human: 'Create, manage, and analyze dynamic forms with AI-powered generation',
+      description_for_model: 'Dynamic Forms API for creating and managing multi-step forms with AI assistance',
+      auth: {
+        type: 'user_http',
+        authorization_type: 'bearer'
+      }
+    },
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -1289,6 +1303,28 @@ const options = {
       {
         name: 'Subscriptions',
         description: 'Gestion des abonnements'
+      },
+      {
+        name: 'AI Plugin',
+        description: 'AI Plugin discovery and configuration endpoints for LLM integration'
+      }
+    ],
+    'x-tagGroups': [
+      {
+        name: 'Core Features',
+        tags: ['Forms', 'Submissions', 'Gemini AI']
+      },
+      {
+        name: 'User Management',
+        tags: ['Authentication', 'Preferences', 'Subscriptions']
+      },
+      {
+        name: 'Administration',
+        tags: ['Account Types', 'Users', 'Analytics']
+      },
+      {
+        name: 'Integration',
+        tags: ['AI Plugin', 'Health']
       }
     ]
   },

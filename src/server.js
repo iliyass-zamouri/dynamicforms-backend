@@ -28,6 +28,7 @@ import adminRoutes from './routes/admin.js'
 import subscriptionsRoutes from './routes/subscriptions.js'
 import analyticsRoutes from './routes/analytics.js'
 import analyticsDataRoutes from './routes/analyticsData.js'
+import aiPluginRoutes from './routes/aiPlugin.js'
 
 // Import database connection
 import { testConnection } from './database/connection.js'
@@ -68,7 +69,22 @@ app.use(
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:8080',
-        'http://127.0.0.1:8080'
+        'http://127.0.0.1:8080',
+        // LLM Agent Origins
+        'https://chat.openai.com',
+        'https://chatgpt.com',
+        'https://platform.openai.com',
+        'https://claude.ai',
+        'https://console.anthropic.com',
+        'https://www.bing.com',
+        'https://copilot.microsoft.com',
+        'https://github.com',
+        'https://copilot.github.com',
+        'https://gemini.google.com',
+        'https://ai.google.dev',
+        // AI Plugin testing origins
+        'https://plugin-test.openai.com',
+        'https://api.openai.com'
       ]
       
       if (allowedOrigins.includes(origin)) {
@@ -77,6 +93,19 @@ app.use(
       
       // Pour Swagger UI, autoriser les requêtes depuis le même serveur
       if (origin && origin.includes('localhost:3000')) {
+        return callback(null, true)
+      }
+      
+      // Allow AI plugin origins patterns
+      if (origin && (
+        origin.includes('openai.com') || 
+        origin.includes('anthropic.com') ||
+        origin.includes('claude.ai') ||
+        origin.includes('microsoft.com') ||
+        origin.includes('github.com') ||
+        origin.includes('google.com') ||
+        origin.includes('gemini')
+      )) {
         return callback(null, true)
       }
       
@@ -91,7 +120,10 @@ app.use(
       'Accept',
       'Origin',
       'Access-Control-Request-Method',
-      'Access-Control-Request-Headers'
+      'Access-Control-Request-Headers',
+      'OpenAI-Conversation-ID',
+      'OpenAI-Ephemeral-User-ID',
+      'X-OpenAI-User-Id'
     ],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
     optionsSuccessStatus: 200
@@ -119,6 +151,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // Static files (for file uploads)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+
+// AI Plugin discovery routes (must be before rate limiting for public access)
+app.use(aiPluginRoutes)
 
 /**
  * @swagger
