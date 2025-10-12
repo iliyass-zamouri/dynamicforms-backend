@@ -41,11 +41,93 @@ const __dirname = path.dirname(__filename)
  *               type: object
  */
 router.get('/openapi.json', (req, res) => {
-  // Enhance the swagger spec with additional metadata for AI plugins
+  // OpenAI Actions limit: Maximum 30 operations
+  // Select the most important operations for AI assistance
+  const priorityOperations = {
+    // AI-Powered Generation (Highest Priority - 3 operations)
+    '/api/gemini/generate': ['post'],
+    '/api/gemini/modify': ['post'],
+    '/api/gemini/analyze': ['post'],
+    
+    // Authentication (3 operations)
+    '/api/auth/register': ['post'],
+    '/api/auth/login': ['post'],
+    '/api/auth/profile': ['get'],
+    
+    // Forms Management - Core CRUD (6 operations)
+    '/api/forms': ['get', 'post'],
+    '/api/forms/{id}': ['get', 'put', 'delete'],
+    '/api/forms/slug/{slug}': ['get'],
+    
+    // Submissions (4 operations)
+    '/api/submissions': ['get', 'post'],
+    '/api/submissions/{id}': ['get'],
+    '/api/forms/{id}/submissions': ['get'],
+    
+    // Analytics (3 operations)
+    '/api/analytics': ['get'],
+    '/api/analytics/forms': ['get'],
+    '/api/analytics/kpis': ['get'],
+    
+    // Subscriptions (2 operations)
+    '/api/subscriptions': ['get'],
+    '/api/subscriptions/current': ['get'],
+    
+    // Account Types (2 operations)
+    '/api/admin/account-types': ['get'],
+    '/api/admin/account-types/{id}': ['get'],
+    
+    // Preferences (2 operations)
+    '/api/preferences': ['get', 'put'],
+    
+    // Conversations (2 operations)
+    '/api/conversations': ['get'],
+    '/api/conversations/{id}': ['get'],
+    
+    // Health Check (1 operation)
+    '/health': ['get']
+    
+    // Total: 30 operations
+  }
+
+  // Filter swagger spec to only include priority operations
+  const filteredPaths = {}
+  let totalOperations = 0
+  
+  if (swaggerSpec.paths) {
+    for (const [path, pathItem] of Object.entries(swaggerSpec.paths)) {
+      // Check if this path is in our priority list
+      if (priorityOperations[path]) {
+        const filteredPathItem = {}
+        
+        // Only include methods that are in our priority list
+        for (const method of priorityOperations[path]) {
+          if (pathItem[method]) {
+            filteredPathItem[method] = {
+              ...pathItem[method],
+              // Enhance description for AI
+              summary: pathItem[method].summary || '',
+              description: pathItem[method].description || ''
+            }
+            totalOperations++
+          }
+        }
+        
+        if (Object.keys(filteredPathItem).length > 0) {
+          filteredPaths[path] = filteredPathItem
+        }
+      }
+    }
+  }
+
+  // Enhance the swagger spec for OpenAI Actions (GPT Actions)
   const enhancedSpec = {
-    ...swaggerSpec,
+    openapi: swaggerSpec.openapi || '3.0.0',
     info: {
       ...swaggerSpec.info,
+      title: 'Dynamic Forms API',
+      version: swaggerSpec.info.version || '1.0.0',
+      description: 'AI-optimized API for creating and managing dynamic forms. Generate forms from natural language, modify existing forms, handle submissions, and track analytics. Limited to 30 most important operations for optimal AI performance.',
       'x-logo': {
         url: `${req.protocol}://${req.get('host')}/logo.png`,
         altText: 'Dynamic Forms API',
@@ -54,14 +136,74 @@ router.get('/openapi.json', (req, res) => {
     servers: [
       {
         url: `${req.protocol}://${req.get('host')}`,
-        description: 'Current server',
-      },
-      ...(swaggerSpec.servers || []),
+        description: 'Dynamic Forms API Server',
+      }
     ],
+    paths: filteredPaths,
+    components: swaggerSpec.components || {},
+    security: swaggerSpec.security || [],
+    tags: [
+      {
+        name: 'Gemini AI',
+        description: 'AI-powered form generation, modification, and analysis',
+        'x-priority': 1
+      },
+      {
+        name: 'Forms',
+        description: 'Create, read, update, and delete forms',
+        'x-priority': 2
+      },
+      {
+        name: 'Submissions',
+        description: 'Handle form submissions and retrieve data',
+        'x-priority': 3
+      },
+      {
+        name: 'Analytics',
+        description: 'Track form performance and insights',
+        'x-priority': 4
+      },
+      {
+        name: 'Authentication',
+        description: 'User authentication and profile management',
+        'x-priority': 5
+      },
+      {
+        name: 'Subscriptions',
+        description: 'View subscription information',
+        'x-priority': 6
+      },
+      {
+        name: 'Account Types',
+        description: 'View available account plans',
+        'x-priority': 7
+      },
+      {
+        name: 'Preferences',
+        description: 'Manage user preferences',
+        'x-priority': 8
+      },
+      {
+        name: 'Conversations',
+        description: 'View AI conversation history',
+        'x-priority': 9
+      },
+      {
+        name: 'Health',
+        description: 'API health status',
+        'x-priority': 10
+      }
+    ],
+    // GPT-specific metadata
+    'x-gpt-description': 'API for creating and managing forms with AI assistance. Use AI generation for creating forms from descriptions, forms endpoints for CRUD operations, and analytics for insights.',
+    'x-gpt-instructions': 'Priority workflow: 1) Use /api/gemini/generate to create forms from natural language, 2) Use /api/gemini/modify to change existing forms, 3) Use /api/forms endpoints for direct CRUD operations, 4) Use /api/analytics for performance data. Always authenticate first with /api/auth/login.',
+    'x-operation-count': totalOperations
   }
 
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Cache-Control', 'public, max-age=3600')
+  res.setHeader('X-Operation-Count', totalOperations.toString())
   res.json(enhancedSpec)
 })
 
