@@ -81,6 +81,28 @@ router.get('/openapi.json', (req, res) => {
   const filteredPaths = {}
   let totalOperations = 0
   
+  // Helper function to generate operationId from path and method
+  const generateOperationId = (path, method) => {
+    // Convert path to camelCase operationId
+    // Example: /api/forms/{id} + get => getFormById
+    const parts = path
+      .replace(/^\//, '')
+      .replace(/\{([^}]+)\}/g, 'by-$1')
+      .split('/')
+      .filter(p => p && p !== 'api')
+    
+    const resource = parts[parts.length - 1]
+    const action = method.toLowerCase()
+    
+    // Generate meaningful operationId
+    let operationId = action + resource.split('-').map((p, i) => 
+      i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : 
+      p.charAt(0).toUpperCase() + p.slice(1)
+    ).join('')
+    
+    return operationId
+  }
+  
   if (swaggerSpec.paths) {
     for (const [path, pathItem] of Object.entries(swaggerSpec.paths)) {
       // Check if this path is in our priority list
@@ -90,11 +112,15 @@ router.get('/openapi.json', (req, res) => {
         // Only include methods that are in our priority list
         for (const method of priorityOperations[path]) {
           if (pathItem[method]) {
+            const operation = pathItem[method]
+            
             filteredPathItem[method] = {
-              ...pathItem[method],
+              ...operation,
+              // Ensure operationId exists (required by OpenAI)
+              operationId: operation.operationId || generateOperationId(path, method),
               // Enhance description for AI
-              summary: pathItem[method].summary || '',
-              description: pathItem[method].description || ''
+              summary: operation.summary || '',
+              description: operation.description || ''
             }
             totalOperations++
           }
@@ -109,7 +135,7 @@ router.get('/openapi.json', (req, res) => {
 
   // Enhance the swagger spec for OpenAI Actions (GPT Actions)
   const enhancedSpec = {
-    openapi: swaggerSpec.openapi || '3.0.0',
+    openapi: '3.1.0', // OpenAI requires 3.1.0 or 3.1.1
     info: {
       ...swaggerSpec.info,
       title: 'Dynamic Forms API',
