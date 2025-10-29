@@ -53,6 +53,9 @@ app.set('trust proxy', 1)
 // Security middleware
 app.use(
   helmet({
+    // Allow OAuth popups to communicate with the opener via postMessage
+    // This avoids "COOP policy would block the window.postMessage call" errors
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   }),
 )
