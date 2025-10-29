@@ -18,8 +18,18 @@ import {
 import { sendErrorResponse } from '../utils/errorResponse.js'
 import logger from '../utils/logger.js'
 import { v4 as uuidv4 } from 'uuid'
+import dotenv from 'dotenv'
 import { sendAdminNewFormNotification } from '../utils/email.js'
+import { SubscriptionService } from '../services/subscriptionService.js'
 
+// Ensure environment variables are loaded
+dotenv.config()
+
+// Check PLANS_DISABLED at runtime to ensure env variables are loaded
+const getPlansDisabled = () => {
+  const value = process.env.PLANS_DISABLED
+  return value === 'true' || value === 'TRUE' || value === 'True' || value === '1'
+}
 const router = express.Router()
 
 /**
@@ -1590,18 +1600,21 @@ router.post('/import', authenticateToken, async (req, res) => {
       }
     } else {
       // Check if user can create more forms (only for new forms)
-      const canCreateForm = await req.user.canCreateForm()
-      
-      if (!canCreateForm) {
-        const preferences = await req.user.getPreferences()
-        return res.status(403).json({
-          success: false,
-          message: `Limite de formulaires atteinte. Votre plan ${preferences.accountType} permet ${preferences.maxForms} formulaires maximum.`,
-          data: {
-            limit: preferences.maxForms,
-            accountType: preferences.accountType
-          }
-        })
+      // Skip limit check if plans are disabled
+      if (!getPlansDisabled()) {
+        const canCreateForm = await req.user.canCreateForm()
+        
+        if (!canCreateForm) {
+          const preferences = await req.user.getPreferences()
+          return res.status(403).json({
+            success: false,
+            message: `Limite de formulaires atteinte. Votre plan ${preferences.accountType} permet ${preferences.maxForms} formulaires maximum.`,
+            data: {
+              limit: preferences.maxForms,
+              accountType: preferences.accountType
+            }
+          })
+        }
       }
     }
 

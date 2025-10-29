@@ -6,6 +6,7 @@ import { PaymentTransaction } from '../models/PaymentTransaction.js'
 import logger from '../utils/logger.js'
 
 const router = express.Router()
+const PLANS_DISABLED = process.env.PLANS_DISABLED === 'true'
 
 /**
  * Extract Stripe subscription ID from invoice object (handles multiple locations)
@@ -87,6 +88,9 @@ async function findAndLinkSubscription(stripeSubId, customerId) {
  * for signature verification. It's applied in server.js before express.json()
  */
 router.post('/webhook/stripe', async (req, res) => {
+  if (PLANS_DISABLED) {
+    return res.json({ received: true, message: 'Plans disabled' })
+  }
   const sig = req.headers['stripe-signature']
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 

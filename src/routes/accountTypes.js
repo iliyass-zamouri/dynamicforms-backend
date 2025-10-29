@@ -5,6 +5,7 @@ import { sendErrorResponse } from '../utils/errorResponse.js'
 import logger from '../utils/logger.js'
 
 const router = express.Router()
+const PLANS_DISABLED = process.env.PLANS_DISABLED === 'true'
 
 /**
  * @swagger
@@ -54,6 +55,9 @@ const router = express.Router()
 // Get all account types
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: { accountTypes: [] } })
+    }
     const { includeInactive = false } = req.query
     const accountTypes = await AccountType.findAll(includeInactive === 'true')
 
@@ -122,6 +126,9 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get account type by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: { accountType: null } })
+    }
     const { id } = req.params
     const accountType = await AccountType.findById(id)
 
@@ -196,6 +203,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Get account type by name
 router.get('/name/:name', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: { accountType: null } })
+    }
     const { name } = req.params
     const accountType = await AccountType.findByName(name)
 

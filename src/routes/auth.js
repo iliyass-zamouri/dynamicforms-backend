@@ -16,6 +16,7 @@ import {
   sendAdminNewUserNotification,
   sendWelcomeEmail
 } from '../utils/email.js'
+import { loginWithGoogleIdToken, loginWithLinkedInCode } from '../services/oauthService.js'
 import { UserPreferences } from '../models/UserPreferences.js'
 import { Subscription } from '../models/Subscription.js'
 
@@ -301,6 +302,90 @@ router.post('/login', validateUserLogin, async (req, res) => {
       success: false,
       message: 'Erreur interne du serveur',
     })
+  }
+})
+
+/**
+ * @swagger
+ * /api/auth/oauth/google:
+ *   post:
+ *     summary: Login/Register with Google ID token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Google ID token from Google Sign-In
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       500:
+ *         description: Server error
+ */
+router.post('/oauth/google', async (req, res) => {
+  try {
+    const { idToken } = req.body
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: 'idToken requis' })
+    }
+    const user = await loginWithGoogleIdToken(idToken)
+    const token = generateToken(user.id, user.role)
+    res.json({ success: true, data: { user: user.toJSON(), token } })
+  } catch (error) {
+    logger.logError(error, { action: 'oauth_google' })
+    res.status(401).json({ success: false, message: 'Authentification Google échouée' })
+  }
+})
+
+/**
+ * @swagger
+ * /api/auth/oauth/linkedin:
+ *   post:
+ *     summary: Login/Register with LinkedIn authorization code
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *               - redirectUri
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: LinkedIn authorization code
+ *               redirectUri:
+ *                 type: string
+ *                 description: Redirect URI used in LinkedIn app config
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       500:
+ *         description: Server error
+ */
+router.post('/oauth/linkedin', async (req, res) => {
+  try {
+    const { code, redirectUri } = req.body
+    if (!code || !redirectUri) {
+      return res.status(400).json({ success: false, message: 'code et redirectUri requis' })
+    }
+    const user = await loginWithLinkedInCode(code, redirectUri)
+    const token = generateToken(user.id, user.role)
+    res.json({ success: true, data: { user: user.toJSON(), token } })
+  } catch (error) {
+    logger.logError(error, { action: 'oauth_linkedin' })
+    res.status(401).json({ success: false, message: 'Authentification LinkedIn échouée' })
   }
 })
 

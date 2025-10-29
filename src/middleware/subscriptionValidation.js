@@ -1,5 +1,15 @@
+import dotenv from 'dotenv'
 import { SubscriptionService } from '../services/subscriptionService.js'
 import logger from '../utils/logger.js'
+
+// Ensure environment variables are loaded
+dotenv.config()
+
+// Check PLANS_DISABLED at runtime to ensure env variables are loaded
+const getPlansDisabled = () => {
+  const value = process.env.PLANS_DISABLED
+  return value === 'true' || value === 'TRUE' || value === 'True' || value === '1'
+}
 
 /**
  * Middleware to check subscription limits before allowing actions
@@ -10,6 +20,12 @@ import logger from '../utils/logger.js'
 export const checkSubscriptionLimits = (action, resourceIdParam = null) => {
   return async (req, res, next) => {
     try {
+      // Skip all limit checks if plans are disabled (check at runtime)
+      const plansDisabled = getPlansDisabled()
+      if (plansDisabled) {
+        req.subscriptionLimits = { allowed: true, limit: Number.MAX_SAFE_INTEGER, current: 0, remaining: Number.MAX_SAFE_INTEGER }
+        return next()
+      }
       const userId = req.user?.id
       if (!userId) {
         return res.status(401).json({
@@ -24,7 +40,7 @@ export const checkSubscriptionLimits = (action, resourceIdParam = null) => {
         resourceId = req.params[resourceIdParam] || req.body[resourceIdParam]
       }
 
-      // Check subscription limits
+      // Check subscription limits (this also checks PLANS_DISABLED internally, but double-check for safety)
       const limitCheck = await SubscriptionService.checkSubscriptionLimits(
         userId,
         action,
@@ -33,6 +49,13 @@ export const checkSubscriptionLimits = (action, resourceIdParam = null) => {
 
       // Add limit information to request object for use in route handlers
       req.subscriptionLimits = limitCheck
+
+      // Safety check: never enforce limits if plans are disabled (check at runtime)
+      const plansDisabledAgain = getPlansDisabled()
+      
+      if (plansDisabledAgain) {
+        return next()
+      }
 
       // If action is not allowed, return error with upgrade suggestion
       if (!limitCheck.allowed) {
@@ -96,6 +119,11 @@ export const checkSubscriptionLimits = (action, resourceIdParam = null) => {
 export const requireActiveSubscription = (allowTrial = true) => {
   return async (req, res, next) => {
     try {
+      if (getPlansDisabled()) {
+        req.subscription = { isActive: true, isInTrial: false, isExpired: false }
+        req.accountType = { name: 'free', displayName: 'Free Plan', features: {} }
+        return next()
+      }
       const userId = req.user?.id
       if (!userId) {
         return res.status(401).json({
@@ -170,6 +198,11 @@ export const requireActiveSubscription = (allowTrial = true) => {
 export const requirePremiumFeature = (feature) => {
   return async (req, res, next) => {
     try {
+      if (getPlansDisabled()) {
+        req.subscription = { isActive: true, isInTrial: false, isExpired: false }
+        req.accountType = { name: 'free', displayName: 'Free Plan', features: { [feature]: true } }
+        return next()
+      }
       const userId = req.user?.id
       if (!userId) {
         return res.status(401).json({
@@ -408,6 +441,17 @@ async function trackUsage(userId, action, resourceId) {
  */
 export const addSubscriptionContext = async (req, res, next) => {
   try {
+    if (getPlansDisabled()) {
+      req.subscriptionContext = {
+        hasActiveSubscription: true,
+        isInTrial: false,
+        isExpired: false,
+        daysUntilExpiration: null,
+        accountTypeName: 'free',
+        accountTypeDisplayName: 'Free Plan'
+      }
+      return next()
+    }
     const userId = req.user?.id
     if (userId) {
       const subscriptionData = await SubscriptionService.getUserSubscription(userId)

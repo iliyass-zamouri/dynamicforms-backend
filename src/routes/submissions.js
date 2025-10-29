@@ -16,6 +16,11 @@ import {
 } from '../middleware/subscriptionValidation.js'
 import { sendSubmissionNotification } from '../utils/email.js'
 
+// Check PLANS_DISABLED at runtime to ensure env variables are loaded
+const getPlansDisabled = () => {
+  const value = process.env.PLANS_DISABLED
+  return value === 'true' || value === 'TRUE' || value === 'True' || value === '1'
+}
 const router = express.Router()
 
 /**
@@ -117,7 +122,7 @@ router.post('/',
     }
 
     // Check subscription limits for form owner (if authenticated)
-    if (req.user && req.user.id === form.userId) {
+    if (req.user && req.user.id === form.userId && !getPlansDisabled()) {
       const limitCheck = await SubscriptionService.checkSubscriptionLimits(
         req.user.id,
         'create_submission',

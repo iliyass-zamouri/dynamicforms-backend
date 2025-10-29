@@ -1,10 +1,22 @@
+import dotenv from 'dotenv'
 import { Subscription, SubscriptionHistory } from '../models/Subscription.js'
 import { AccountType } from '../models/AccountType.js'
 import { UserPreferences } from '../models/UserPreferences.js'
 import { executeQuery } from '../database/connection.js'
 import logger from '../utils/logger.js'
 
+// Ensure environment variables are loaded
+dotenv.config()
+
 export class SubscriptionService {
+  // Check PLANS_DISABLED at runtime to ensure env variables are loaded
+  static getPlansDisabled() {
+    const value = process.env.PLANS_DISABLED
+    const result = value === 'true' || value === 'TRUE' || value === 'True' || value === '1'
+    console.log('[DEBUG] SubscriptionService.getPlansDisabled() called:', { value, result, type: typeof value })
+    return result
+  }
+  
   // Create a new subscription for a user
   static async createSubscription(userId, accountTypeId, billingCycle = 'monthly', options = {}) {
     const startTime = Date.now()
@@ -212,6 +224,12 @@ export class SubscriptionService {
 
   // Get user's current subscription with account type details
   static async getUserSubscription(userId) {
+    if (this.getPlansDisabled()) {
+      return {
+        subscription: { isActive: true, isInTrial: false, isExpired: false },
+        accountType: { name: 'free', displayName: 'Free Plan', features: {} }
+      }
+    }
     // Prefer active subscription
     let subscription = await Subscription.findActiveByUserId(userId)
 
@@ -288,6 +306,9 @@ export class SubscriptionService {
 
   // Get available account types for upgrade/downgrade
   static async getAvailableAccountTypes(userId) {
+    if (this.getPlansDisabled()) {
+      return []
+    }
     const subscription = await Subscription.findActiveByUserId(userId)
     const allAccountTypes = await AccountType.findAll()
     
@@ -320,6 +341,16 @@ export class SubscriptionService {
 
   // Process subscription limits and usage
   static async checkSubscriptionLimits(userId, action, resourceId = null) {
+    const plansDisabled = this.getPlansDisabled()
+    console.log('[DEBUG] SubscriptionService.checkSubscriptionLimits:', {
+      userId,
+      action,
+      plansDisabled
+    })
+    
+    if (plansDisabled) {
+      return { allowed: true, limit: Number.MAX_SAFE_INTEGER, current: 0, remaining: Number.MAX_SAFE_INTEGER }
+    }
     const subscription = await Subscription.findActiveByUserId(userId)
     
     if (!subscription) {
@@ -338,6 +369,9 @@ export class SubscriptionService {
 
   // Check limits against specific account type
   static async checkLimitsAgainstAccountType(userId, accountType, action, resourceId = null) {
+    if (this.getPlansDisabled()) {
+      return { allowed: true, limit: Number.MAX_SAFE_INTEGER, current: 0, remaining: Number.MAX_SAFE_INTEGER }
+    }
     const preferences = await UserPreferences.findByUserId(userId)
     
     // If no preferences exist, user has no permissions

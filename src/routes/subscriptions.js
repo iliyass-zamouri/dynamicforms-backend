@@ -7,6 +7,7 @@ import logger from '../utils/logger.js'
 import PaymentService from '../services/paymentService.js'
 
 const router = express.Router()
+const PLANS_DISABLED = process.env.PLANS_DISABLED === 'true'
 
 /**
  * @swagger
@@ -48,6 +49,9 @@ const router = express.Router()
  */
 router.get('/current', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: { subscription: null, accountType: null } })
+    }
     const subscriptionData = await SubscriptionService.getUserSubscription(req.user.id)
     
     res.json({
@@ -143,6 +147,9 @@ router.get('/current', authenticateToken, async (req, res) => {
  */
 router.get('/usage', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: null })
+    }
     const usageData = await SubscriptionService.getSubscriptionUsage(req.user.id)
     
     res.json({
@@ -212,6 +219,9 @@ router.get('/usage', authenticateToken, async (req, res) => {
  */
 router.get('/history', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: [] })
+    }
     const { limit = 50, offset = 0 } = req.query
     const history = await SubscriptionService.getUserSubscriptionHistory(
       req.user.id, 
@@ -291,6 +301,9 @@ router.get('/history', authenticateToken, async (req, res) => {
  */
 router.get('/available-plans', optionalAuth, async (req, res) => {
   try {
+    if (!PLANS_DISABLED) {
+      return res.json({ success: true, data: [] })
+    }
     let availablePlans
     
     // Check if user is authenticated
@@ -437,6 +450,9 @@ router.get('/available-plans', optionalAuth, async (req, res) => {
  */
 router.post('/create', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.status(201).json({ success: true, data: { message: 'Plans disabled' } })
+    }
     const {
       accountTypeId,
       billingCycle,
@@ -650,6 +666,9 @@ router.post('/create', authenticateToken, async (req, res) => {
  */
 router.put('/:subscriptionId/change-plan', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: { message: 'Plans disabled' } })
+    }
     const { subscriptionId } = req.params
     const { newAccountTypeId, reason = 'plan_change_requested' } = req.body
 
@@ -779,6 +798,9 @@ router.put('/:subscriptionId/change-plan', authenticateToken, async (req, res) =
  */
 router.put('/:subscriptionId/cancel', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: { message: 'Plans disabled' } })
+    }
     const { subscriptionId } = req.params
     const { reason = 'user_requested' } = req.body
 
@@ -840,6 +862,9 @@ router.put('/:subscriptionId/cancel', authenticateToken, async (req, res) => {
  */
 router.post('/:subscriptionId/checkout', authenticateToken, async (req, res) => {
   try {
+    if (PLANS_DISABLED) {
+      return res.json({ success: true, data: { message: 'Plans disabled' } })
+    }
     const { subscriptionId } = req.params
     const { paymentProvider = 'stripe', priceId, successUrl, cancelUrl, customerId } = req.body
 
