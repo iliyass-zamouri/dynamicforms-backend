@@ -12,7 +12,7 @@ export const adminNewUserTemplate = (user) => {
   })
 
   const content = `
-    <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: center;">
+    <div style="padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: center;">
       <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-family: Arial, Helvetica, sans-serif;">Nouvel utilisateur inscrit</h1>
     </div>
 

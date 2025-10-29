@@ -10,7 +10,7 @@ export const baseEmailTemplate = ({
   content,
   primaryColor = '#3b82f6',
   companyName = 'Dynamic Forms',
-  companyAddress = '123 Form Street, Tech City, TC 12345',
+  companyAddress = '9th Arrondissement in Paris, Paris, FR',
   companyLogo = 'https://dynamicforms.fr/logo.png',
   year = new Date().getFullYear(),
 }) => {
@@ -365,7 +365,7 @@ export const baseEmailTemplate = ({
         <table role="presentation" class="email-container" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color: #ffffff; border-collapse: collapse;">
           <!-- Header -->
           <tr>
-            <td class="email-header" style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
+            <td class="email-header" style="padding: 40px 30px; text-align: center;">
               <img src="${companyLogo}" alt="${companyName}" class="email-logo" style="max-width: 200px; height: auto; display: block; margin: 0 auto; border: 0; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic;" />
               <div class="email-tagline" style="color: #ffffff; font-size: 14px; margin-top: 12px; font-family: Arial, Helvetica, sans-serif;">Créez de magnifiques formulaires, sans effort</div>
             </td>
