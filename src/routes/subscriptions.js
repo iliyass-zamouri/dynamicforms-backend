@@ -301,7 +301,7 @@ router.get('/history', authenticateToken, async (req, res) => {
  */
 router.get('/available-plans', optionalAuth, async (req, res) => {
   try {
-    if (!PLANS_DISABLED) {
+    if (PLANS_DISABLED) {
       return res.json({ success: true, data: [] })
     }
     let availablePlans
