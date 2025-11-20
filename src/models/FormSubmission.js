@@ -1,12 +1,14 @@
 import { executeQuery, executeQueryRaw } from '../database/connection.js'
 import { mapSubmissionDataToLabels } from '../utils/submissionMapper.js'
+import logger from '../utils/logger.js'
 
 export class FormSubmission {
   constructor(data) {
     this.id = data.id
     this.formId = data.form_id
     this.userId = data.user_id
-    this.submissionData = data.submission_data
+    this.rawSubmissionData = data.submission_data
+    this.submissionData = FormSubmission.parseSubmissionData(data.submission_data)
     this.ipAddress = data.ip_address
     this.userAgent = data.user_agent
     this.submittedAt = data.submitted_at
@@ -257,5 +259,26 @@ export class FormSubmission {
       data: this.submissionData,
       submittedAt: this.submittedAt,
     }
+  }
+
+  static parseSubmissionData(payload) {
+    if (payload === null || payload === undefined) {
+      return {}
+    }
+
+    if (typeof payload === 'object') {
+      return payload
+    }
+
+    if (typeof payload === 'string') {
+      try {
+        return JSON.parse(payload)
+      } catch (error) {
+        logger?.logWarn?.('form_submission_parse_failed', { error: error.message })
+        return {}
+      }
+    }
+
+    return {}
   }
 }
